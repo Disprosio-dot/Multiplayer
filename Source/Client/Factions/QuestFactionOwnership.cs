@@ -157,3 +157,34 @@ static class QuestMapMatchesGeneratingFaction
             __result = false;
     }
 }
+
+// The same gap's second entry point: many C# quest roots (hospitality
+// refugees, beggars, wanderer joins, DLC arrivals) pick their map via
+// QuestGen_Get.GetMap, which never consults QuestNode_GetMap. Same owner
+// rule: re-pick among the generating faction's own maps with vanilla's
+// preference order; null makes the quest's map test fail, vanilla's own
+// no-map behavior.
+[HarmonyPatch(typeof(QuestGen_Get), nameof(QuestGen_Get.GetMap))]
+static class QuestGenGetMapMatchesGeneratingFaction
+{
+    static void Postfix(ref Map __result, bool mustBeInfestable, int? preferMapWithMinFreeColonists, bool canBeSpace)
+    {
+        if (__result == null || Multiplayer.Client == null || !Multiplayer.GameComp.multifaction)
+            return;
+
+        if (!QuestFactionOwnership.IsOwnablePlayerFaction(Faction.OfPlayer) ||
+            __result.ParentFaction is not { IsPlayer: true } || __result.ParentFaction == Faction.OfPlayer)
+            return;
+
+        int minCount = preferMapWithMinFreeColonists ?? 1;
+        var ownMaps = Find.Maps.Where(m =>
+            m.IsPlayerHome && m.ParentFaction == Faction.OfPlayer &&
+            (canBeSpace || !m.Tile.LayerDef.isSpace) &&
+            (!mustBeInfestable || InfestationCellFinder.TryFindCell(out _, m))).ToList();
+
+        if (!ownMaps.Where(m => m.mapPawns.FreeColonists.Count >= minCount).TryRandomElement(out var rePicked))
+            ownMaps.Where(m => m.mapPawns.FreeColonists.Any()).TryRandomElement(out rePicked);
+
+        __result = rePicked;
+    }
+}
