@@ -114,6 +114,9 @@ public class SaveableDesyncInfo(
             .AppendLine("\n###Version Data###")
             .AppendLine($"Multiplayer Mod Version|||{MpVersion.Version}")
             .AppendLine($"Rimworld Version and Rev|||{VersionControl.CurrentVersionStringWithRev}")
+            // Whether the builds matched is the first forensic question; null
+            // means the join-data mismatch window never opened
+            .AppendLine($"Join Data Diff|||{Multiplayer.session.joinDataDiff ?? "clean (no mismatch window shown)"}")
             .AppendLine("\n###Debug Options###")
             .AppendLine($"Multiplayer Debug Build - Client|||{MpVersion.IsDebug}")
             .AppendLine($"Multiplayer Debug Mode - Host|||{Multiplayer.GameComp.debugMode}")

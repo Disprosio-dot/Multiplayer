@@ -45,6 +45,11 @@ namespace Multiplayer.Client
         public int simulationFailures;
         public string firstSimulationFailure;
 
+        // Set when the join-data mismatch window let the player connect anyway;
+        // null means no mismatch window was shown. Included in desync reports -
+        // whether the builds matched is the first forensic question.
+        public string joinDataDiff;
+
         public List<CSteamID> pendingSteam = new();
         public List<CSteamID> knownUsers = new();
 

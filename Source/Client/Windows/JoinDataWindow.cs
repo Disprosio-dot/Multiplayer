@@ -250,6 +250,20 @@ namespace Multiplayer.Client
             if (connectAnyway)
             {
                 Log.Message($"Multiplayer: Connecting anyway ({DiffString()})");
+
+                // Remember what was mismatched for the desync report, and make
+                // the risk visible in chat - a mid-rejoin click-through is easy
+                // to wave past and mismatched files mean divergent simulations
+                if (Multiplayer.session != null)
+                {
+                    Multiplayer.session.joinDataDiff = DiffString();
+
+                    if (filesRoot.children.Any() || modListDiff != ModListDiff.None)
+                        Multiplayer.session.AddMsg(
+                            $"Connected with mismatched mod files ({DiffString()}) - desyncs are likely until everyone runs the same build.",
+                            rawMessage: true);
+                }
+
                 connectAnywayCallback();
                 Close(false);
             }
@@ -269,7 +283,8 @@ namespace Multiplayer.Client
         private string DiffString()
         {
             var str = "";
-            str += $"RW version match: {remote.remoteMpVersion == MpVersion.Version}, ";
+            // remoteMpVersion is the MP mod version, not the RimWorld version
+            str += $"MP version match: {remote.remoteMpVersion == MpVersion.Version}, ";
             str += $"Mod list diff: {modListDiff}, ";
             str += $"Files match: {!filesRoot.children.Any()}, ";
             str += $"Config sync enabled: {remote.hasConfigs}, ";
