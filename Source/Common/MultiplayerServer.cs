@@ -123,24 +123,7 @@ namespace Multiplayer.Common
                     int ticked = 0;
                     while (realTime > 0 && ticked < 2)
                     {
-                        playersBehind.Clear();
-                        foreach (var p in PlayingIngamePlayers)
-                        {
-                            if (p.ExtrapolatedTicksBehind > 90)
-                            {
-                                if (p.behindSinceNetTimer < 0)
-                                    p.behindSinceNetTimer = NetTimer;
-
-                                // Tolerate a lagging/tabbed-out client for a grace period
-                                // before pausing everyone; they catch up on return
-                                if (NetTimer - p.behindSinceNetTimer > PauseGraceNetTicks)
-                                    playersBehind.Add(p);
-                            }
-                            else
-                            {
-                                p.behindSinceNetTimer = -1;
-                            }
-                        }
+                        EvaluatePlayersBehind(playersBehind);
 
                         if (!freezeManager.Frozen &&
                             PlayingPlayers.Any(p => p.ExtrapolatedTicksBehind < 40) &&
@@ -193,7 +176,38 @@ namespace Multiplayer.Common
             }
         }
 
-        private void TickNet()
+        internal void EvaluatePlayersBehind(List<ServerPlayer> playersBehind)
+        {
+            playersBehind.Clear();
+            foreach (var p in JoinedPlayers)
+            {
+                // Only actively playing players hold the pause gate; anyone
+                // loading, rejoining or desynced gets the timer reset so the
+                // grace restarts fresh if they return still behind
+                if (p.status != PlayerStatus.Playing || !p.IsPlaying)
+                {
+                    p.behindSinceNetTimer = -1;
+                    continue;
+                }
+
+                if (p.ExtrapolatedTicksBehind > 90)
+                {
+                    if (p.behindSinceNetTimer < 0)
+                        p.behindSinceNetTimer = NetTimer;
+
+                    // Tolerate a lagging/tabbed-out client for a grace period
+                    // before pausing everyone; they catch up on return
+                    if (NetTimer - p.behindSinceNetTimer > PauseGraceNetTicks)
+                        playersBehind.Add(p);
+                }
+                else
+                {
+                    p.behindSinceNetTimer = -1;
+                }
+            }
+        }
+
+        internal void TickNet()
         {
             NetTimer++;
 

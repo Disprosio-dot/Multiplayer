@@ -18,13 +18,14 @@ static class SuppressCrossFactionIncidents
 
         if (parms.target is Map { ParentFaction: { IsPlayer: true } owner } && owner != Faction.OfPlayer)
         {
-            // Spectator context is how quest-fired incidents execute in async-off
-            // games - log but let through to avoid eating quest raids
+            // QuestFactionOwnership now routes quest-fired incidents through
+            // the owner's context - spectator context here is a residual gap.
+            // Log it but let it through rather than eat a quest raid.
             if (Faction.OfPlayer == Multiplayer.WorldComp.spectatorFaction)
             {
                 MpLog.Log(
                     $"Spectator-context incident {__instance.def?.defName} targeting map of " +
-                    $"{owner.Name} - candidate for quest faction routing (61-quests-review.md)");
+                    $"{owner.Name} - quest-ownership routing gap (61-quests-review.md)");
                 return true;
             }
 

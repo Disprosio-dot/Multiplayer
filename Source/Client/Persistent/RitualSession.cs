@@ -33,10 +33,11 @@ public class RitualSession : SemiPersistentSession
     public void Start()
     {
         // Multifaction: ritual side-effects (ideo development, letters) must
-        // resolve against the ritual's faction, not whoever invoked Start
+        // resolve against the ritual's faction, not whoever invoked Start.
+        // Ownable excludes the spectator faction (IsPlayer matches it)
         var ownerFaction = Multiplayer.GameComp.multifaction
-            ? data.organizer?.Faction is { IsPlayer: true } f ? f
-                : map.ParentFaction is { IsPlayer: true } pf ? pf : null
+            ? data.organizer?.Faction is { } f && QuestFactionOwnership.IsOwnablePlayerFaction(f) ? f
+                : map.ParentFaction is { } pf && QuestFactionOwnership.IsOwnablePlayerFaction(pf) ? pf : null
             : null;
 
         if (ownerFaction != null)

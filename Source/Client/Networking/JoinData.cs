@@ -87,7 +87,7 @@ namespace Multiplayer.Client
         private static bool ConfigsEquivalent(IEnumerable<ModConfig> a, IEnumerable<ModConfig> b)
         {
             static ModConfig Normalize(ModConfig c) =>
-                c with { Contents = c.Contents?.Replace("\r\n", "\n") };
+                c with { Contents = c.Contents?.Replace("\r\n", "\n").Replace("\r", "\n") };
 
             return a.Select(Normalize).EqualAsSets(b.Select(Normalize));
         }

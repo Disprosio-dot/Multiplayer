@@ -8,7 +8,8 @@ namespace Multiplayer.Client;
 // Multifaction: GameComponent_Bossgroup state is a game singleton - one player's
 // bossgroup call escalated threat difficulty and cooldown for every faction.
 // Dict/list swap by reference on faction switch; the cooldown int is copied in
-// and written back by the postfix on its single writer.
+// and written back by the postfix on its single writer. Copy-in and write-back
+// are both multifaction-gated: plain MP leaves the vanilla component untouched.
 public class FactionBossgroupData : IExposable
 {
     public int lastBossgroupCalled = -9999999;

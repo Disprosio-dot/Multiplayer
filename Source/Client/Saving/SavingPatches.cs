@@ -172,9 +172,10 @@ namespace Multiplayer.Client.Saving
             }
             catch (Exception e)
             {
-                // Tolerated so one broken object doesn't abort the load, but every
-                // object after the first shares "[excepted]" and drops from
-                // registration - that shouldn't stay silent
+                // Tolerated so one broken object doesn't abort the load, but a
+                // throwing object silently never registers (vanilla's per-object
+                // try/catch skips it; "[excepted]" is only a message placeholder)
+                // - that shouldn't stay silent
                 Log.WarningOnce(
                     $"MP: GetUniqueLoadID threw for {reffable?.GetType().FullName ?? "null"}; object may not resolve cross-references: {e.Message}",
                     reffable?.GetType().GetHashCode() ?? 0);

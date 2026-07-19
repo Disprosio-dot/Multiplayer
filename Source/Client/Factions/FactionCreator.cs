@@ -271,8 +271,10 @@ public static class FactionCreator
             precept.ideo = ideo;
         }
 
-        // Same back-reference fixups as FixIdeoAfterCopy
-        ideo.development.ideo = ideo;
+        // Same back-reference fixups as FixIdeoAfterCopy. development is null
+        // for non-fluid ideos; style always exists
+        if (ideo.development != null)
+            ideo.development.ideo = ideo;
         ideo.style.ideo = ideo;
 
         return ideo;

@@ -570,7 +570,9 @@ namespace Multiplayer.Client
 
         // "Carry to shuttle" calls InitiateLoading from interface code, mutating
         // loading state on the clicking client only (the job order itself already
-        // syncs via TryTakeOrderedJob)
+        // syncs via TryTakeOrderedJob). The skipped original's int return (new
+        // group id) is default on the sync path - the real id is allocated later
+        // inside the synced command; all vanilla call sites discard it
         [MpPrefix(typeof(TransporterUtility), nameof(TransporterUtility.InitiateLoading))]
         static bool InitiateLoading_Prefix(IEnumerable<CompTransporter> transporters)
         {
@@ -746,7 +748,9 @@ namespace Multiplayer.Client
                     if (precept.ID < 0)
                         precept.ID = Find.UniqueIDsManager.GetNextPreceptID();
 
-                ideo.development.ideo = ideo;
+                // CopyTo only creates development for fluid ideos - guard non-fluid copies
+                if (ideo.development != null)
+                    ideo.development.ideo = ideo;
                 ideo.style.ideo = ideo;
             }
         }

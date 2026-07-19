@@ -178,9 +178,12 @@ public class MultiplayerWorldComp : IHasSessionData
         if (data.analysisManager != null)
             game.analysisManager = data.analysisManager;
 
-        // Bossgroup component state: dict/list swap by reference, the
-        // cooldown int is copied in (written back by BossgroupLastCalledWriteBack)
-        if (data.bossgroup != null && game.GetComponent<GameComponent_Bossgroup>() is { } bossgroups)
+        // Bossgroup component state: dict/list swap by reference, the cooldown
+        // int is copied in (written back by BossgroupLastCalledWriteBack).
+        // Multifaction only - in plain MP the vanilla component stays live and
+        // this would stamp a stale cooldown over it every forced context push
+        if (Multiplayer.GameComp.multifaction &&
+            data.bossgroup != null && game.GetComponent<GameComponent_Bossgroup>() is { } bossgroups)
         {
             bossgroups.timesCalledBossgroups = data.bossgroup.timesCalledBossgroups;
             bossgroups.killedBosses = data.bossgroup.killedBosses;
