@@ -37,6 +37,8 @@ public static class IngameDebug
             text.AppendLine($"Tick Until: {TickPatch.tickUntil}{separator}Remote: {Multiplayer.session?.remoteTickUntil ?? 0}");
             text.AppendLine($"Received Commands: {Multiplayer.session?.receivedCmds ?? 0}");
             text.AppendLine($"Sent Commands: {Multiplayer.session?.remoteSentCmds ?? 0}");
+            text.AppendLine($"Sim Failures: {Multiplayer.session?.simulationFailures ?? 0}" +
+                (Multiplayer.session?.firstSimulationFailure is { } first ? $"{separator}First: {first}" : ""));
 
             text.AppendLine($"\nFaction ID: {Faction.OfPlayer.loadID} ({FactionContext.stack.Count}){separator}Real Faction ID: {Multiplayer.RealPlayerFaction?.loadID ?? -1}");
             text.AppendLine($"Next Thing ID: {Find.UniqueIDsManager.nextThingID}{separator}Next Job ID: {Find.UniqueIDsManager.nextJobID}");

@@ -223,13 +223,16 @@ public static class FactionCreator
 
         faction.ideos = new FactionIdeosTracker(faction);
 
-        if (!ModsConfig.IdeologyActive || Find.IdeoManager.classicMode || chooseIdeoInfo.SelectedIdeo == null)
+        if (!ModsConfig.IdeologyActive || Find.IdeoManager.classicMode ||
+            (chooseIdeoInfo.SelectedIdeo == null && chooseIdeoInfo.CustomIdeoData == null))
         {
             faction.ideos.SetPrimary(Faction.OfPlayer.ideos.PrimaryIdeo);
         }
         else
         {
-            var newIdeo = GenerateIdeo(chooseIdeoInfo);
+            var newIdeo = chooseIdeoInfo.CustomIdeoData != null
+                ? ReconstructCustomIdeo(chooseIdeoInfo.CustomIdeoData)
+                : GenerateIdeo(chooseIdeoInfo);
             faction.ideos.SetPrimary(newIdeo);
             Find.IdeoManager.Add(newIdeo);
         }
@@ -252,6 +255,27 @@ public static class FactionCreator
                 faction.SetRelation(new FactionRelation(f, FactionRelationKind.Neutral));
 
         return faction;
+    }
+
+    // Deserializes a player-provided custom ideo (.rid file) inside the synced
+    // creation command; ids from the issuer's local game are reassigned here,
+    // where allocation is deterministic across clients
+    private static Ideo ReconstructCustomIdeo(byte[] data)
+    {
+        var ideo = ScribeUtil.ReadExposable<Ideo>(data);
+
+        ideo.id = Find.UniqueIDsManager.GetNextIdeoID();
+        foreach (var precept in ideo.PreceptsListForReading)
+        {
+            precept.ID = Find.UniqueIDsManager.GetNextPreceptID();
+            precept.ideo = ideo;
+        }
+
+        // Same back-reference fixups as FixIdeoAfterCopy
+        ideo.development.ideo = ideo;
+        ideo.style.ideo = ideo;
+
+        return ideo;
     }
 
     private static Ideo GenerateIdeo(IdeologyData chooseIdeoInfo)

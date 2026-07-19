@@ -237,13 +237,29 @@ namespace Multiplayer.Client.Patches
         private static MethodInfo tryTakeOrderedJob =
             AccessTools.Method(typeof(Pawn_JobTracker), nameof(Pawn_JobTracker.TryTakeOrderedJob));
 
+        private static MethodInfo endCurrentJob =
+            AccessTools.Method(typeof(Pawn_JobTracker), nameof(Pawn_JobTracker.EndCurrentJob));
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
+            var endCurrentJobCalls = 0;
+
             foreach (var inst in instructions)
             {
                 if (inst.Calls(tryTakeOrderedJob)) inst.operand = ((Delegate)CustomTryTakeOrderedJob).Method;
+                if (inst.Calls(endCurrentJob))
+                {
+                    inst.operand = ((Delegate)SyncedEndGotoJob).Method;
+                    endCurrentJobCalls++;
+                }
                 yield return inst;
             }
+
+            // #849: the EndCurrentJob call (goto onto the pawn's own cell) stopped
+            // the pawn on the clicking client only; fail loud if the shape changes
+            if (endCurrentJobCalls != 1)
+                Multiplayer.LoadingError(
+                    $"DraftedMove_GotoFeedbackPatch: expected 1 EndCurrentJob call in PawnGotoAction, found {endCurrentJobCalls}");
         }
 
         [SyncMethod(exposeParameters = [1], context = SyncContext.QueueOrder_Down)]
@@ -253,6 +269,17 @@ namespace Multiplayer.Client.Patches
             if (self.TryTakeOrderedJob(job, tag, requestQueueing) && (TickPatch.currentExecutingCmdIssuedBySelf || Multiplayer.Client == null))
                 FleckMaker.Static(job.targetA.Cell, self.pawn.Map, FleckDefOf.FeedbackGoto);
             return false;
+        }
+
+        [SyncMethod]
+        static void SyncedEndGotoJob(Pawn_JobTracker self, JobCondition condition, bool startNewJob, bool canReturnToPool)
+        {
+            // The command lands ticks after the click - only end the job if it's
+            // still the goto this order was aimed at
+            if (Multiplayer.Client != null && self.curJob?.def != JobDefOf.Goto)
+                return;
+
+            self.EndCurrentJob(condition, startNewJob, canReturnToPool);
         }
     }
 

@@ -40,6 +40,11 @@ namespace Multiplayer.Client
 
         public bool desynced;
 
+        // Synced commands/ticks that threw and were skipped this session -
+        // each one is a potential divergence. See SimulationFailures.
+        public int simulationFailures;
+        public string firstSimulationFailure;
+
         public List<CSteamID> pendingSteam = new();
         public List<CSteamID> knownUsers = new();
 

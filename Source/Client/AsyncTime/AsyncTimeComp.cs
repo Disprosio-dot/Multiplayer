@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using HarmonyLib;
 using Multiplayer.Client.Comp;
+using Multiplayer.Client.Desyncs;
 using Multiplayer.Client.Factions;
 using Multiplayer.Client.Patches;
 using Multiplayer.Client.Saving;
@@ -290,7 +291,7 @@ namespace Multiplayer.Client
             }
             catch (Exception e)
             {
-                MpLog.Error($"Map cmd exception ({cmdType}): {e}");
+                SimulationFailures.Handle($"Map cmd exception ({cmdType})", e);
             }
             finally
             {

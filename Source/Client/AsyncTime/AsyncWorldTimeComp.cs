@@ -252,7 +252,7 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         }
         catch (Exception e)
         {
-            Log.Error($"World cmd exception ({cmdType}): {e}");
+            SimulationFailures.Handle($"World cmd exception ({cmdType})", e);
         }
         finally
         {

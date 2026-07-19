@@ -17,6 +17,9 @@ public class FactionWorldData : IExposable
     public Storyteller storyteller;
     public StoryWatcher storyWatcher;
 
+    public AnalysisManager analysisManager;
+    public FactionBossgroupData bossgroup;
+
     public FactionWorldData() { }
 
     public void ExposeData()
@@ -33,6 +36,9 @@ public class FactionWorldData : IExposable
         Scribe_Deep.Look(ref storyteller, "storyteller");
         Scribe_Deep.Look(ref storyWatcher, "storyWatcher");
 
+        Scribe_Deep.Look(ref analysisManager, "analysisManager");
+        Scribe_Deep.Look(ref bossgroup, "bossgroup");
+
         if (Scribe.mode == LoadSaveMode.LoadingVars)
         {
             researchManager ??= new ResearchManager();
@@ -45,6 +51,9 @@ public class FactionWorldData : IExposable
             storyteller ??= new Storyteller(Find.Storyteller.def, Find.Storyteller.difficultyDef,
                 Find.Storyteller.difficulty);
             storyWatcher ??= new StoryWatcher();
+
+            analysisManager ??= new AnalysisManager();
+            bossgroup ??= FactionBossgroupData.New();
         }
     }
 
@@ -74,7 +83,10 @@ public class FactionWorldData : IExposable
 
             history = new History(),
             storyteller = new Storyteller(Find.Storyteller.def, Find.Storyteller.difficultyDef, Find.Storyteller.difficulty),
-            storyWatcher = new StoryWatcher()
+            storyWatcher = new StoryWatcher(),
+
+            analysisManager = new AnalysisManager(),
+            bossgroup = FactionBossgroupData.New()
         };
     }
 
@@ -92,7 +104,10 @@ public class FactionWorldData : IExposable
 
             history = Find.History,
             storyteller = Find.Storyteller,
-            storyWatcher = Find.StoryWatcher
+            storyWatcher = Find.StoryWatcher,
+
+            analysisManager = Current.Game.analysisManager,
+            bossgroup = FactionBossgroupData.FromCurrent()
         };
     }
 }

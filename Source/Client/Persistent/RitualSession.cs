@@ -1,4 +1,5 @@
 ﻿using Multiplayer.API;
+using Multiplayer.Client.Factions;
 using RimWorld;
 using Verse;
 
@@ -30,6 +31,29 @@ public class RitualSession : SemiPersistentSession
 
     [SyncMethod]
     public void Start()
+    {
+        // Multifaction: ritual side-effects (ideo development, letters) must
+        // resolve against the ritual's faction, not whoever invoked Start
+        var ownerFaction = Multiplayer.GameComp.multifaction
+            ? data.organizer?.Faction is { IsPlayer: true } f ? f
+                : map.ParentFaction is { IsPlayer: true } pf ? pf : null
+            : null;
+
+        if (ownerFaction != null)
+            map.PushFaction(ownerFaction);
+
+        try
+        {
+            StartInt();
+        }
+        finally
+        {
+            if (ownerFaction != null)
+                map.PopFaction();
+        }
+    }
+
+    private void StartInt()
     {
         // Handle the same stuff as Dialog_BeginGravshipLaunch
         if (data.isGravshipRitual)

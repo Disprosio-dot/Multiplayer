@@ -22,6 +22,9 @@ public class MultiplayerWorldComp : IHasSessionData
 
     public Faction spectatorFaction;
 
+    // Multifaction: quest.id -> faction.loadID owning the quest (see QuestFactionOwnership)
+    public Dictionary<int, int> questOwnership = new();
+
     private int currentFactionId;
 
     public MultiplayerWorldComp(World world)
@@ -34,6 +37,10 @@ public class MultiplayerWorldComp : IHasSessionData
     public void ExposeData()
     {
         ExposeFactionData();
+
+        Scribe_Collections.Look(ref questOwnership, "questOwnership", LookMode.Value, LookMode.Value);
+        if (Scribe.mode != LoadSaveMode.Saving)
+            questOwnership ??= new Dictionary<int, int>();
 
         sessionManager.ExposeSessions();
         // Ensure a pause lock session exists if there's any pause locks registered
@@ -78,6 +85,9 @@ public class MultiplayerWorldComp : IHasSessionData
             AddSpectatorFaction();
             RemoveOpponentFaction();
         }
+
+        if (Multiplayer.GameComp.multifaction)
+            Factions.QuestFactionOwnership.BackfillOwnership();
 
         // Fix old save files by ensuring all factions have access to Anomaly research if
         // it was enabled. This needs to be done since Anomaly state is shared by all players.
@@ -164,6 +174,18 @@ public class MultiplayerWorldComp : IHasSessionData
         game.history = data.history;
         game.storyteller = data.storyteller;
         game.storyWatcher = data.storyWatcher;
+
+        if (data.analysisManager != null)
+            game.analysisManager = data.analysisManager;
+
+        // Bossgroup component state: dict/list swap by reference, the
+        // cooldown int is copied in (written back by BossgroupLastCalledWriteBack)
+        if (data.bossgroup != null && game.GetComponent<GameComponent_Bossgroup>() is { } bossgroups)
+        {
+            bossgroups.timesCalledBossgroups = data.bossgroup.timesCalledBossgroups;
+            bossgroups.killedBosses = data.bossgroup.killedBosses;
+            bossgroups.lastBossgroupCalled = data.bossgroup.lastBossgroupCalled;
+        }
     }
 
     public void DirtyColonyTradeForMap(Map map)

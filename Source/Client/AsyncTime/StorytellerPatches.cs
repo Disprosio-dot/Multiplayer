@@ -39,7 +39,8 @@ public class StorytellerTargetsPatch
         if (Multiplayer.MapContext != null)
         {
             __result.Clear();
-            __result.Add(Multiplayer.MapContext);
+            if (FactionCanReceiveIncidentsOn(Multiplayer.MapContext, Faction.OfPlayer))
+                __result.Add(Multiplayer.MapContext);
         }
         else if (AsyncWorldTimeComp.tickingWorld)
         {
@@ -51,6 +52,22 @@ public class StorytellerTargetsPatch
 
             __result.Add(Find.World);
         }
+    }
+
+    // #659: FactionRepeater runs this once per player faction; without an ownership
+    // check every faction's storyteller fires on every map (wrong-faction raids and
+    // letters, storyteller pressure multiplied by player count)
+    static bool FactionCanReceiveIncidentsOn(Map map, Faction faction)
+    {
+        if (!Multiplayer.GameComp.multifaction)
+            return true;
+
+        if (map.ParentFaction == faction)
+            return true;
+
+        // Unowned maps (sites, temp maps): target factions with humanlike pawns present
+        return map.ParentFaction is not { IsPlayer: true } &&
+               map.mapPawns.SpawnedPawnsInFaction(faction).Any(p => p.RaceProps.Humanlike);
     }
 }
 

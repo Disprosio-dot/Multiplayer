@@ -32,6 +32,10 @@ namespace Multiplayer.Common
         public const char EndpointSeparator = '&';
         public const int NetTicksPerSecond = 30; // Not an exact amount. The net loop isn't particularly precise.
 
+        // How long a client may stay behind the pause gate before the whole
+        // simulation pauses for it (net ticks, ~45s real time)
+        public const int PauseGraceNetTicks = 45 * NetTicksPerSecond;
+
         public static readonly Regex UsernamePattern = new(@"^[a-zA-Z0-9_]+$");
 
         public WorldData worldData;
@@ -120,7 +124,24 @@ namespace Multiplayer.Common
                     while (realTime > 0 && ticked < 2)
                     {
                         playersBehind.Clear();
-                        playersBehind.AddRange(PlayingIngamePlayers.Where(p => p.ExtrapolatedTicksBehind > 90));
+                        foreach (var p in PlayingIngamePlayers)
+                        {
+                            if (p.ExtrapolatedTicksBehind > 90)
+                            {
+                                if (p.behindSinceNetTimer < 0)
+                                    p.behindSinceNetTimer = NetTimer;
+
+                                // Tolerate a lagging/tabbed-out client for a grace period
+                                // before pausing everyone; they catch up on return
+                                if (NetTimer - p.behindSinceNetTimer > PauseGraceNetTicks)
+                                    playersBehind.Add(p);
+                            }
+                            else
+                            {
+                                p.behindSinceNetTimer = -1;
+                            }
+                        }
+
                         if (!freezeManager.Frozen &&
                             PlayingPlayers.Any(p => p.ExtrapolatedTicksBehind < 40) &&
                             !playersBehind.Any())

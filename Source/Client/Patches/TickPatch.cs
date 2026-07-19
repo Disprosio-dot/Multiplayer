@@ -5,6 +5,7 @@ using System.Linq;
 using HarmonyLib;
 using LudeonTK;
 using Multiplayer.Client.AsyncTime;
+using Multiplayer.Client.Desyncs;
 using Multiplayer.Common;
 using Multiplayer.Common.Networking.Packet;
 using RimWorld.Planet;
@@ -258,7 +259,7 @@ namespace Multiplayer.Client
                 }
                 catch (Exception e)
                 {
-                    Log.Error($"Exception during ticking {tickable}: {e}");
+                    SimulationFailures.Handle($"Exception during ticking {tickable}", e);
                 }
             }
         }
