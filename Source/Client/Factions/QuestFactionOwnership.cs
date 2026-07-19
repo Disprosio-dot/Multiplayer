@@ -140,3 +140,20 @@ static class RemoveQuestOwnership
             Multiplayer.WorldComp?.questOwnership.Remove(quest.id);
     }
 }
+
+// Vanilla QuestNode_GetMap picks any IsPlayerHome map, so one faction's
+// quest could bind another player's colony. Generation context = owner;
+// reject other player factions' maps (neutral/site maps stay acceptable).
+[HarmonyPatch(typeof(RimWorld.QuestGen.QuestNode_GetMap), "IsAcceptableMap")]
+static class QuestMapMatchesGeneratingFaction
+{
+    static void Postfix(Map map, ref bool __result)
+    {
+        if (!__result || Multiplayer.Client == null || !Multiplayer.GameComp.multifaction)
+            return;
+
+        if (QuestFactionOwnership.IsOwnablePlayerFaction(Faction.OfPlayer) &&
+            map.ParentFaction is { IsPlayer: true } && map.ParentFaction != Faction.OfPlayer)
+            __result = false;
+    }
+}
