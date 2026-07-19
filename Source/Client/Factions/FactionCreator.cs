@@ -110,6 +110,20 @@ public static class FactionCreator
     {
         // This has to be null, otherwise, during map generation, Faction.OfPlayer returns it which breaks FactionContext
         Find.GameInitData.playerFaction = null;
+
+        // PrepForMapGen's Biotech tail reads the CLIENT-LOCAL static
+        // StartingPawnUtility generation requests to add custom xenotypes to
+        // the game-global customXenotypeDatabase - only the issuer's client
+        // has them populated, so the database (and later factionless-pawn
+        // xenotype Rand rolls) would diverge across clients. Clear the
+        // requests on every client so the loop no-ops identically everywhere.
+        // Accepted cost: custom xenotypes of faction-creation starting pawns
+        // aren't registered in the database (the pawns keep their xenotype;
+        // the entry only feeds the UI list and factionless spawn weighting).
+        if (StartingPawnUtility.StartingAndOptionalPawnGenerationRequests.Any(r => r.ForcedCustomXenotype != null))
+            Log.Message("MP: faction creation dropped custom-xenotype database registration (kept deterministic)");
+        StartingPawnUtility.StartingAndOptionalPawnGenerationRequests.Clear();
+
         Find.GameInitData.PrepForMapGen();
 
         // ScenPart_PlayerFaction --> PreMapGenerate

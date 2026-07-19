@@ -1,5 +1,6 @@
 using HarmonyLib;
 using Multiplayer.Client.Util;
+using Multiplayer.Common;
 using RimWorld;
 using Verse;
 
@@ -16,6 +17,13 @@ static class SuppressCrossFactionIncidents
         if (Multiplayer.Client == null || !Multiplayer.GameComp.multifaction)
             return true;
 
+        // Explicit player orders always execute: an incident fired inside a
+        // synced command (e.g. a Call-Aid permit used while standing on
+        // another faction's map) is deliberate, not a routing bug - only
+        // storyteller/quest/tick-driven incidents keep the safety net
+        if (TickPatch.currentExecutingCmdType == CommandType.Sync)
+            return true;
+
         if (parms.target is Map { ParentFaction: { IsPlayer: true } owner } && owner != Faction.OfPlayer)
         {
             // QuestFactionOwnership now routes quest-fired incidents through
@@ -25,7 +33,7 @@ static class SuppressCrossFactionIncidents
             {
                 MpLog.Log(
                     $"Spectator-context incident {__instance.def?.defName} targeting map of " +
-                    $"{owner.Name} - quest-ownership routing gap (61-quests-review.md)");
+                    $"{owner.Name} - unrouted generation source, letting it through");
                 return true;
             }
 
@@ -50,6 +58,6 @@ static class WarnSpectatorStorytellerFire
         if (Multiplayer.Client != null && Multiplayer.GameComp.multifaction &&
             Faction.OfPlayer == Multiplayer.WorldComp.spectatorFaction)
             MpLog.Error($"Storyteller fired {fi?.def?.defName} in spectator faction context - " +
-                        "an unrouted generation source (see 62-incidents-review.md)");
+                        "an unrouted generation source");
     }
 }

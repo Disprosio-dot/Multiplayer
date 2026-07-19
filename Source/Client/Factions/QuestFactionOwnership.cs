@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using Multiplayer.Client.Util;
 using RimWorld;
+using RimWorld.Planet;
 using RimWorld.QuestGen;
 using Verse;
 
@@ -155,6 +157,132 @@ static class QuestMapMatchesGeneratingFaction
         if (QuestFactionOwnership.IsOwnablePlayerFaction(Faction.OfPlayer) &&
             map.ParentFaction is { IsPlayer: true } && map.ParentFaction != Faction.OfPlayer)
             __result = false;
+    }
+}
+
+// Multifaction: QuestNode_Root_ReliquaryPilgrims has its own private map
+// picker accepting any player map with a reliquary - neither GetMap owner
+// filter applies. Re-pick among the generating faction's own maps.
+[HarmonyPatch(typeof(QuestNode_Root_ReliquaryPilgrims), "GetMap")]
+static class ReliquaryPilgrimsMapOwnerFilter
+{
+    static void Postfix(ref Map __result)
+    {
+        if (__result == null || Multiplayer.Client == null || !Multiplayer.GameComp.multifaction)
+            return;
+
+        if (!QuestFactionOwnership.IsOwnablePlayerFaction(Faction.OfPlayer) ||
+            __result.ParentFaction is not { IsPlayer: true } || __result.ParentFaction == Faction.OfPlayer)
+            return;
+
+        Find.Maps
+            .Where(m => m.IsPlayerHome && m.ParentFaction == Faction.OfPlayer &&
+                        QuestNode_Root_ReliquaryPilgrims.TryFindReliquaryWithRelic(m, out _, out _, out _))
+            .TryRandomElement(out var rePicked);
+        __result = rePicked;
+    }
+}
+
+// Same gap: QuestNode_Root_WorkSite picks its map with an inline predicate
+// over IsPlayerHome maps. The predicate is a compiler-generated lambda -
+// resolved by ordinal (like VNPE's Drain gizmo) and shape-checked so a game
+// update degrades to a warning, not a crash.
+[StaticConstructorOnStartup]
+static class WorkSiteMapPickerFilter
+{
+    static WorkSiteMapPickerFilter()
+    {
+        try
+        {
+            var lambda = MpMethodUtil.GetLambda(typeof(QuestNode_Root_WorkSite), "RunInt", MethodType.Normal, null, 0);
+            if (lambda.ReturnType != typeof(bool) ||
+                lambda.GetParameters() is not { Length: 1 } ps || ps[0].ParameterType != typeof(Map))
+            {
+                Log.Warning("MP: WorkSite map-picker lambda shape unexpected - owner filter skipped");
+                return;
+            }
+
+            Multiplayer.harmony.Patch(lambda,
+                postfix: new HarmonyMethod(typeof(WorkSiteMapPickerFilter), nameof(PredicatePostfix)));
+        }
+        catch (Exception e)
+        {
+            Log.Warning($"MP: WorkSite map-picker lambda not found - owner filter skipped ({e.Message})");
+        }
+    }
+
+    static void PredicatePostfix(Map m, ref bool __result)
+    {
+        if (!__result || Multiplayer.Client == null || !Multiplayer.GameComp.multifaction)
+            return;
+
+        if (QuestFactionOwnership.IsOwnablePlayerFaction(Faction.OfPlayer) &&
+            m.ParentFaction is { IsPlayer: true } && m.ParentFaction != Faction.OfPlayer)
+            __result = false;
+    }
+}
+
+// The lambda filter narrows RunInt's candidates, so TestRunInt must agree or
+// generation can proceed with no acceptable map left
+[HarmonyPatch(typeof(QuestNode_Root_WorkSite), "TestRunInt")]
+static class WorkSiteTestRunMatchesFilter
+{
+    static void Postfix(ref bool __result)
+    {
+        if (!__result || Multiplayer.Client == null || !Multiplayer.GameComp.multifaction ||
+            !QuestFactionOwnership.IsOwnablePlayerFaction(Faction.OfPlayer))
+            return;
+
+        __result = Find.Maps.Any(m =>
+            m.IsPlayerHome && m.ParentFaction == Faction.OfPlayer && QuestNode_Root_WorkSite.GetCandidates(m.Tile).Any());
+    }
+}
+
+// Delivery-side: when a quest's bound map is lost mid-quest, vanilla
+// retargets to the FIRST player home map, faction-blind - a hostile mech
+// cluster or monument copy lands on an uninvolved colony. Quest parts call
+// this under the pushed owner context, so prefer the owner's maps.
+[HarmonyPatch(typeof(Quest), nameof(Quest.TryFindNewSuitableMapParentForRetarget))]
+static class RetargetPrefersOwnerMaps
+{
+    static void Postfix(ref MapParent __result)
+    {
+        if (Multiplayer.Client == null || !Multiplayer.GameComp.multifaction ||
+            !QuestFactionOwnership.IsOwnablePlayerFaction(Faction.OfPlayer))
+            return;
+
+        if (__result?.Map is { } m && m.ParentFaction == Faction.OfPlayer)
+            return;
+
+        var owned = Find.Maps.FirstOrDefault(map =>
+            map.IsPlayerHome && map.ParentFaction == Faction.OfPlayer)?.Parent;
+        if (owned != null)
+            __result = owned;
+    }
+}
+
+// Caravan royals' bestowing-ceremony checks tick in the world tick
+// (spectator), so the quest was stamped to the fallback owner and its
+// quest-available letter - received under spectator - was dropped for every
+// client. Push the royal's own faction around generation.
+[HarmonyPatch(typeof(RoyalTitleUtility), nameof(RoyalTitleUtility.GenerateBestowingCeremonyQuest))]
+static class BestowingCeremonyOwnerContext
+{
+    static void Prefix(Pawn pawn, ref bool __state)
+    {
+        if (Multiplayer.Client == null || !Multiplayer.GameComp.multifaction ||
+            !QuestFactionOwnership.IsOwnablePlayerFaction(pawn?.Faction) ||
+            pawn.Faction == Faction.OfPlayer)
+            return;
+
+        ((Map)null).PushFaction(pawn.Faction);
+        __state = true;
+    }
+
+    static void Finalizer(bool __state)
+    {
+        if (__state)
+            FactionExtensions.PopFaction();
     }
 }
 

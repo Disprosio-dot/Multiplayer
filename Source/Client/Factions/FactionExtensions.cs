@@ -43,7 +43,13 @@ public static class FactionExtensions
         faction = quest.QuestLookTargets
             .Where(t => t.HasWorldObject && t.WorldObject is Settlement)
             .Select(t => ((Settlement)t.WorldObject).Faction)
-            .FirstOrDefault(f => f != null);
+            .FirstOrDefault(f => f != null)
+            // Pawn-targeted quests (bestowing ceremonies, rescues) have no
+            // settlement target - the targeted pawn's faction is the owner
+            ?? quest.QuestLookTargets
+                .Where(t => t.HasThing && t.Thing is Pawn)
+                .Select(t => ((Pawn)t.Thing).Faction)
+                .FirstOrDefault(f => f is { IsPlayer: true });
 
         return faction != null;
     }
