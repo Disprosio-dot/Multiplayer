@@ -20,6 +20,11 @@ public class FactionWorldData : IExposable
     public AnalysisManager analysisManager;
     public FactionBossgroupData bossgroup;
 
+    // Per-faction season notification state: each faction's transitions are
+    // computed from its own min-timezone home map's async clock. See the
+    // DateNotifier patch in AsyncTime/AsyncTimePatches.cs.
+    public Season lastSeason;
+
     public FactionWorldData() { }
 
     public void ExposeData()
@@ -38,6 +43,8 @@ public class FactionWorldData : IExposable
 
         Scribe_Deep.Look(ref analysisManager, "analysisManager");
         Scribe_Deep.Look(ref bossgroup, "bossgroup");
+
+        Scribe_Values.Look(ref lastSeason, "lastSeason", Season.Undefined);
 
         if (Scribe.mode == LoadSaveMode.LoadingVars)
         {

@@ -202,6 +202,7 @@ public class PacketTest
             gameName = "GameName",
             playerId = 1,
             rwVersion = "1.6.4566",
+            language = "English",
             mpVersion = "0.11.0+123456",
             defStatus =
             [
@@ -222,6 +223,7 @@ public class PacketTest
         yield return new ClientInitDataPacket
         {
             rwVersion = "1.0.0",
+            language = "English",
             debugOnlySyncCmds = [1, 2, 3, 4],
             hostOnlySyncCmds = [1],
             modCtorRoundMode = RoundModeEnum.ToNearest,

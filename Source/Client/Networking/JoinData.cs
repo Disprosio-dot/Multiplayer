@@ -76,6 +76,9 @@ namespace Multiplayer.Client
         {
             return
                 remote.remoteRwVersion == VersionControl.CurrentVersionString &&
+                // Letter/message text is Translate()d at fire time and scribed -
+                // mismatched game languages scribe divergent text
+                remote.remoteLanguage == LanguageDatabase.activeLanguage.folderName &&
                 remote.CompareMods(activeModsSnapshot) == ModListDiff.None &&
                 remote.remoteFiles.DictsEqual(modFilesSnapshot) &&
                 (!remote.hasConfigs || ConfigsEquivalent(remote.remoteModConfigs,
@@ -159,6 +162,7 @@ namespace Multiplayer.Client
     {
         public string remoteRwVersion;
         public string remoteMpVersion;
+        public string remoteLanguage;
 
         public List<ModInfo> remoteMods = new();
         public ModFileDict remoteFiles = new();
@@ -187,6 +191,7 @@ namespace Multiplayer.Client
             {
                 remoteRwVersion = packet.rwVersion,
                 remoteMpVersion = packet.mpVersion,
+                remoteLanguage = packet.language,
                 hasConfigs = packet.configsIncluded,
             };
 

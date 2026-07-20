@@ -25,6 +25,11 @@ public class MultiplayerWorldComp : IHasSessionData
     // Multifaction: quest.id -> faction.loadID owning the quest (see QuestFactionOwnership)
     public Dictionary<int, int> questOwnership = new();
 
+    // Multifaction: wastepack thingIDNumber -> faction.loadID of the dumper.
+    // Consulted when a spawned pack rots on a non-player-home map; pruned on
+    // destroy. See Factions/WastepackAttribution.cs.
+    public Dictionary<int, int> wastepackDumpers = new();
+
     private int currentFactionId;
 
     public MultiplayerWorldComp(World world)
@@ -41,6 +46,10 @@ public class MultiplayerWorldComp : IHasSessionData
         Scribe_Collections.Look(ref questOwnership, "questOwnership", LookMode.Value, LookMode.Value);
         if (Scribe.mode != LoadSaveMode.Saving)
             questOwnership ??= new Dictionary<int, int>();
+
+        Scribe_Collections.Look(ref wastepackDumpers, "wastepackDumpers", LookMode.Value, LookMode.Value);
+        if (Scribe.mode != LoadSaveMode.Saving)
+            wastepackDumpers ??= new Dictionary<int, int>();
 
         sessionManager.ExposeSessions();
         // Ensure a pause lock session exists if there's any pause locks registered
