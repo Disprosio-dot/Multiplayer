@@ -21,9 +21,6 @@ namespace Multiplayer.Client.Comp
 
         public string idBlockBase64;
 
-        // Host's Turn It On and Off settings (TIOAOCompat); null when absent
-        public string tioaoHostSettings;
-
         public bool IsLowestWins => timeControl == TimeControl.LowestWins;
 
         public PlayerData LocalPlayerDataOrNull => playerData.GetValueOrDefault(Multiplayer.session.playerId);
@@ -37,7 +34,6 @@ namespace Multiplayer.Client.Comp
             Scribe_Values.Look(ref pauseOnLetter, "pauseOnLetter");
             Scribe_Values.Look(ref timeControl, "timeControl");
             Scribe_Values.Look(ref nextSessionId, "nextSessionId");
-            Scribe_Values.Look(ref tioaoHostSettings, "tioaoHostSettings");
 
             // Store for back-compat conversion in GameExposeComponentsPatch
             if (Scribe.mode == LoadSaveMode.LoadingVars)
