@@ -30,6 +30,10 @@ public class MultiplayerWorldComp : IHasSessionData
     // destroy. See Factions/WastepackAttribution.cs.
     public Dictionary<int, int> wastepackDumpers = new();
 
+    // Multifaction: per-faction ritual repeat-penalty windows.
+    // Key = (precept.Id << 32) | faction.loadID -> finish tick (see IdeoSharedStatePatches)
+    public Dictionary<long, int> ritualLastFinished = new();
+
     private int currentFactionId;
 
     public MultiplayerWorldComp(World world)
@@ -44,12 +48,16 @@ public class MultiplayerWorldComp : IHasSessionData
         ExposeFactionData();
 
         Scribe_Collections.Look(ref questOwnership, "questOwnership", LookMode.Value, LookMode.Value);
+        Scribe_Collections.Look(ref ritualLastFinished, "ritualLastFinished", LookMode.Value, LookMode.Value);
         if (Scribe.mode != LoadSaveMode.Saving)
             questOwnership ??= new Dictionary<int, int>();
 
         Scribe_Collections.Look(ref wastepackDumpers, "wastepackDumpers", LookMode.Value, LookMode.Value);
         if (Scribe.mode != LoadSaveMode.Saving)
+        {
             wastepackDumpers ??= new Dictionary<int, int>();
+            ritualLastFinished ??= new Dictionary<long, int>();
+        }
 
         sessionManager.ExposeSessions();
         // Ensure a pause lock session exists if there's any pause locks registered
@@ -186,6 +194,11 @@ public class MultiplayerWorldComp : IHasSessionData
 
         if (data.analysisManager != null)
             game.analysisManager = data.analysisManager;
+
+        // Goodwill caps/natural-goodwill cache per faction: workers read
+        // Faction.OfPlayer's ideo, so each faction's queries hit its own instance
+        if (Multiplayer.GameComp.multifaction && data.goodwillSituationManager != null)
+            Find.FactionManager.goodwillSituationManager = data.goodwillSituationManager;
 
         // Bossgroup component state: dict/list swap by reference, the cooldown
         // int is copied in (written back by BossgroupLastCalledWriteBack).

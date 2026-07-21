@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using RimWorld;
 using Verse;
 
@@ -25,6 +26,11 @@ public class FactionWorldData : IExposable
     // DateNotifier patch in AsyncTime/AsyncTimePatches.cs.
     public Season lastSeason;
 
+    // Per-faction goodwill caps cache (runtime-only, rebuilds deterministically)
+    // and per-NPC drift timers replacing vanilla's single OfPlayer-bound timer
+    public GoodwillSituationManager goodwillSituationManager;
+    public Dictionary<int, int> naturalGoodwillTimers;
+
     public FactionWorldData() { }
 
     public void ExposeData()
@@ -45,9 +51,12 @@ public class FactionWorldData : IExposable
         Scribe_Deep.Look(ref bossgroup, "bossgroup");
 
         Scribe_Values.Look(ref lastSeason, "lastSeason", Season.Undefined);
+        Scribe_Collections.Look(ref naturalGoodwillTimers, "naturalGoodwillTimers", LookMode.Value, LookMode.Value);
 
         if (Scribe.mode == LoadSaveMode.LoadingVars)
         {
+            goodwillSituationManager ??= new GoodwillSituationManager();
+            naturalGoodwillTimers ??= new Dictionary<int, int>();
             researchManager ??= new ResearchManager();
             drugPolicyDatabase ??= new DrugPolicyDatabase();
             outfitDatabase ??= new OutfitDatabase();
@@ -93,7 +102,10 @@ public class FactionWorldData : IExposable
             storyWatcher = new StoryWatcher(),
 
             analysisManager = new AnalysisManager(),
-            bossgroup = FactionBossgroupData.New()
+            bossgroup = FactionBossgroupData.New(),
+
+            goodwillSituationManager = new GoodwillSituationManager(),
+            naturalGoodwillTimers = new Dictionary<int, int>()
         };
     }
 
@@ -114,7 +126,10 @@ public class FactionWorldData : IExposable
             storyWatcher = Find.StoryWatcher,
 
             analysisManager = Current.Game.analysisManager,
-            bossgroup = FactionBossgroupData.FromCurrent()
+            bossgroup = FactionBossgroupData.FromCurrent(),
+
+            goodwillSituationManager = Find.FactionManager.goodwillSituationManager,
+            naturalGoodwillTimers = new Dictionary<int, int>()
         };
     }
 }
