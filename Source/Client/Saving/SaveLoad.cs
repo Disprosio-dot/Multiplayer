@@ -36,6 +36,9 @@ namespace Multiplayer.Client
         {
             Multiplayer.reloading = true;
 
+            // Host TIOAO settings must be in the game comp before it is saved
+            Patches.TIOAOCompat.BeforeMpSave();
+
             var tweenedPos = new Dictionary<int, Vector3>();
             var localFactionId = Multiplayer.RealPlayerFaction.loadID;
             var mapCmds = new Dictionary<int, Queue<ScheduledCommand>>();
@@ -138,6 +141,8 @@ namespace Multiplayer.Client
 
             // SaveCompression enabled in the patch
             SavedGameLoaderNow.LoadGameFromSaveFileNow(null);
+
+            Patches.TIOAOCompat.AfterMpLoad();
 
             DeepProfiler.End();
         }
