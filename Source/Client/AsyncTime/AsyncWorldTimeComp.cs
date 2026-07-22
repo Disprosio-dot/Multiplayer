@@ -96,7 +96,11 @@ public class AsyncWorldTimeComp : IExposable, ITickable
 
         Multiplayer.game.worldComp.ExposeData();
 
-        if (Scribe.mode == LoadSaveMode.LoadingVars)
+        // World-basis tick stamps (CooldownClockPatches) survive reload only if
+        // the world clock itself does; absent node (older saves) falls back to
+        // the old rebuild-from-TicksGame behavior
+        Scribe_Values.Look(ref worldTicks, "worldTicks", -1);
+        if (Scribe.mode == LoadSaveMode.LoadingVars && worldTicks < 0)
             worldTicks = Find.TickManager.TicksGame;
     }
 
