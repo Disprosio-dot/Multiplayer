@@ -108,6 +108,23 @@ public class PacketTest
             factionId = 30
         });
 
+        // Steam allows 32 *characters*; this 30-char Cyrillic name is 56 UTF-8 bytes
+        // and must survive the byte-limited reader
+        yield return ServerPlayerListPacket.Add(new ServerPlayerListPacket.PlayerInfo
+        {
+            id = 4,
+            username = "Dana",
+            latency = 55,
+            type = PlayerType.Steam,
+            status = PlayerStatus.Playing,
+            steamId = 444555666,
+            steamPersonaName = "Тестовое имя игрока в Римворлд",
+            ticksBehind = 0,
+            simulating = false,
+            r = 128, g = 64, b = 32,
+            factionId = 40
+        });
+
         yield return ServerPlayerListPacket.Remove(99);
 
         yield return ServerPlayerListPacket.Latencies([
