@@ -162,8 +162,42 @@ namespace Multiplayer.Client
 
         static void Postfix()
         {
-            if (Multiplayer.Client == null || Find.CurrentMap == null) return;
+            if (Multiplayer.Client == null) return;
+
+            InstallViewerTimeContext();
+
+            if (Find.CurrentMap == null) return;
             Shader.SetGlobalFloat(ShaderPropertyIDs.GameSeconds, Find.CurrentMap.AsyncTime().mapTicks.TicksToSeconds());
+        }
+
+        // Nothing owns the global time speed between ticks, so rendering and the UI
+        // read whatever the last tickable left installed. Give the rest of the frame
+        // the speed of what the player is actually looking at instead.
+        //
+        // Without this a paused map reports Paused = true (patched from CurrentMap)
+        // while TickRateMultiplier reports the fastest running map's rate (computed
+        // from the global) - a pair vanilla can't produce. Per-frame code believes
+        // both: tweened things extrapolate against a root that never advances and
+        // snap back, UI animates at the remote map's rate against a stopped clock.
+        //
+        // Speed only. ticksGameInt stays the world clock, the normalization basis for
+        // cooldown stamps. gameStartAbsTick is left alone because
+        // AsyncTimeComp.GameStartAbsTick latches it into scribed per-map state, so a
+        // viewer-dependent latch would turn a render bug into a desync. slower keeps a
+        // single owner; TickRatePatch matches Paused before ForcedNormalSpeed, so the
+        // speed alone resolves this.
+        //
+        // Runs after the whole tick and command loop, and every sim path installs its
+        // own context on entry, so it is never a simulation input - tick counts,
+        // ordering and rand draws are unchanged.
+        private static void InstallViewerTimeContext()
+        {
+            if (Find.TickManager == null) return;
+
+            if (WorldRendererUtility.WorldSelected)
+                Find.TickManager.CurTimeSpeed = Multiplayer.AsyncWorldTime.DesiredTimeSpeed;
+            else if (Find.CurrentMap != null)
+                Find.TickManager.CurTimeSpeed = Find.CurrentMap.AsyncTime().DesiredTimeSpeed;
         }
 
         private static bool RunCmds()

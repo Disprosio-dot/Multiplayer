@@ -86,7 +86,11 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         Scribe_Values.Look(ref timeSpeedInt, "timeSpeed");
         Scribe_Custom.LookULong(ref randState, "randState", 2);
 
-        TimeSpeed timeSpeed = Find.TickManager.CurTimeSpeed;
+        // Read the world's own speed, not the global TickManager - the global only
+        // held it because PreContext used to leave it installed, so a save taken from
+        // a UI context would persist the viewed map's speed instead. Guarded on
+        // Saving: DesiredTimeSpeed walks Find.Maps, empty during LoadingVars.
+        TimeSpeed timeSpeed = Scribe.mode == LoadSaveMode.Saving ? DesiredTimeSpeed : TimeSpeed.Paused;
         Scribe_Values.Look(ref timeSpeed, "timeSpeed");
         if (Scribe.mode == LoadSaveMode.LoadingVars)
             Find.TickManager.CurTimeSpeed = timeSpeed;
@@ -145,8 +149,17 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         }
     }
 
+    // The time speed is global on TickManager but per-tickable here, so the world
+    // tick has to put back what was installed before it. It didn't: the world's speed
+    // (the fastest running map) stayed installed for the rest of the frame, and every
+    // reader without its own context - TickRateMultiplier above all - believed time
+    // was running at that rate even while the viewed map was paused.
+    // Speed only; DoSingleTick's ticksGameInt increment IS the world clock.
+    private TimeSpeed? prevSpeed;
+
     public void PreContext()
     {
+        prevSpeed = Find.TickManager.CurTimeSpeed;
         Find.TickManager.CurTimeSpeed = DesiredTimeSpeed;
         Rand.PushState();
         Rand.StateCompressed = randState;
@@ -170,6 +183,12 @@ public class AsyncWorldTimeComp : IExposable, ITickable
 
         randState = Rand.StateCompressed;
         Rand.PopState();
+
+        if (prevSpeed.HasValue)
+        {
+            Find.TickManager.CurTimeSpeed = prevSpeed.Value;
+            prevSpeed = null;
+        }
     }
 
     public void ExecuteCmd(ScheduledCommand cmd)
