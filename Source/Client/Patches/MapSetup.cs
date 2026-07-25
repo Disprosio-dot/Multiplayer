@@ -68,8 +68,14 @@ public static class MapSetup
             startingTimeSpeed = TimeSpeed.Paused;
         }
 
+        // Ask the world, not the global TickManager: the global is viewer-dependent
+        // (TickPatch installs the speed of whatever the local player is looking at so
+        // rendering has a context) and this value is scribed onto the new map, so
+        // reading it here would let clients disagree on a generated map's starting
+        // speed. The world's DesiredTimeSpeed is what the global used to carry here
+        // and is identical on every client.
         if (!Multiplayer.GameComp.asyncTime)
-            startingTimeSpeed = Find.TickManager.CurTimeSpeed;
+            startingTimeSpeed = Multiplayer.AsyncWorldTime?.DesiredTimeSpeed ?? Find.TickManager.CurTimeSpeed;
 
         var asyncTimeCompForMap = new AsyncTimeComp(map, gameStartAbsTick)
         {
