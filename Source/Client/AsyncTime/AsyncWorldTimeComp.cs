@@ -90,10 +90,13 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         // held it because PreContext used to leave it installed, so a save taken from
         // a UI context would persist the viewed map's speed instead. Guarded on
         // Saving: DesiredTimeSpeed walks Find.Maps, empty during LoadingVars.
-        TimeSpeed timeSpeed = Scribe.mode == LoadSaveMode.Saving ? DesiredTimeSpeed : TimeSpeed.Paused;
-        Scribe_Values.Look(ref timeSpeed, "timeSpeed");
+        // Own node: sharing "timeSpeed" with the field above made this a no-op, since
+        // Look resolves a label to the first matching child. timeSpeedInt is the
+        // default, so saves without the node fall back to the speed loaded above.
+        TimeSpeed globalTimeSpeed = Scribe.mode == LoadSaveMode.Saving ? DesiredTimeSpeed : timeSpeedInt;
+        Scribe_Values.Look(ref globalTimeSpeed, "globalTimeSpeed", timeSpeedInt);
         if (Scribe.mode == LoadSaveMode.LoadingVars)
-            Find.TickManager.CurTimeSpeed = timeSpeed;
+            Find.TickManager.CurTimeSpeed = globalTimeSpeed;
 
         if (Scribe.mode == LoadSaveMode.LoadingVars)
             Multiplayer.game.worldComp = new MultiplayerWorldComp(world);
