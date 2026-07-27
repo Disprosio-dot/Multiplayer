@@ -20,7 +20,7 @@ namespace Multiplayer.Client.Patches;
 // The old fix forced a full rescan on every call. That made the draw count
 // deterministic but turned each quest-fire tick into 300-700 full
 // every-item-on-every-map scans: a multi-second freeze on every client at
-// every random quest arrival (doc 89). The requirement was never "always
+// every random quest arrival. The requirement was never "always
 // rescan", only "every client rescans the same number of times" - so in sim
 // context, repeat calls collapse per (tile, TickPatch.Timer), identical on
 // every client in every sim context: the first call each session-tick
