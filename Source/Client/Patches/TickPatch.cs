@@ -166,38 +166,42 @@ namespace Multiplayer.Client
 
             InstallViewerTimeContext();
 
-            if (Find.CurrentMap == null) return;
-            Shader.SetGlobalFloat(ShaderPropertyIDs.GameSeconds, Find.CurrentMap.AsyncTime().mapTicks.TicksToSeconds());
+            // AsyncTime() can be null while a join or load is mid-flight
+            // (Multiplayer.game lags Client in that window)
+            if (Find.CurrentMap?.AsyncTime() is not { } viewerTime) return;
+            Shader.SetGlobalFloat(ShaderPropertyIDs.GameSeconds, viewerTime.mapTicks.TicksToSeconds());
         }
 
-        // Nothing owns the global time speed between ticks, so rendering and the UI
-        // read whatever the last tickable left installed. Give the rest of the frame
-        // the speed of what the player is actually looking at instead.
+// Nothing owns the global clock between ticks, so rendering and the
+        // UI read whatever the last tickable left installed. Give the rest of
+        // the frame one defined context instead: the full snapshot (tick
+        // count, speed, slower, gameStartAbsTick) of what the player is
+        // actually looking at, so every unwrapped per-frame reader sees a
+        // single consistent clock instead of alternating between the viewer's
+        // clock inside SetMapTime brackets and the world clock outside them.
         //
-        // Without this a paused map reports Paused = true (patched from CurrentMap)
-        // while TickRateMultiplier reports the fastest running map's rate (computed
-        // from the global) - a pair vanilla can't produce. Per-frame code believes
-        // both: tweened things extrapolate against a root that never advances and
-        // snap back, UI animates at the remote map's rate against a stopped clock.
+        // Between-tick readers that genuinely want world time have explicit
+        // world wraps: LetterStackUpdate, AlertsReadout, World.WorldUpdate
+        // and - load-bearing for determinism - SaveLoad.SaveGameData, which
+        // would otherwise scribe each client's viewer clock into join-point
+        // saves.
         //
-        // Speed only. ticksGameInt stays the world clock, the normalization basis for
-        // cooldown stamps. gameStartAbsTick is left alone because
-        // AsyncTimeComp.GameStartAbsTick latches it into scribed per-map state, so a
-        // viewer-dependent latch would turn a render bug into a desync. slower keeps a
-        // single owner; TickRatePatch matches Paused before ForcedNormalSpeed, so the
-        // speed alone resolves this.
-        //
-        // Runs after the whole tick and command loop, and every sim path installs its
-        // own context on entry, so it is never a simulation input - tick counts,
-        // ordering and rand draws are unchanged.
+        // Safe for the sim: this runs after the entire tick and command loop,
+        // and every sim path installs its own context on entry (the world
+        // tick installs its own count), so this value is never a simulation
+        // input.
         private static void InstallViewerTimeContext()
         {
-            if (Find.TickManager == null) return;
+            // Null checks cover the join/load window where Multiplayer.game
+            // (and with it the async comps) lags Multiplayer.Client
+            if (Multiplayer.game == null || Find.TickManager == null) return;
 
+            // The previous snapshots are deliberately discarded: this installs
+            // the frame's owner, it doesn't bracket a scope
             if (WorldRendererUtility.WorldSelected)
-                Find.TickManager.CurTimeSpeed = Multiplayer.AsyncWorldTime.DesiredTimeSpeed;
-            else if (Find.CurrentMap != null)
-                Find.TickManager.CurTimeSpeed = Find.CurrentMap.AsyncTime().DesiredTimeSpeed;
+                TimeSnapshot.GetAndSetFromWorld();
+            else if (Find.CurrentMap is { } map && map.AsyncTime() != null)
+                TimeSnapshot.GetAndSetFromMap(map);
         }
 
         private static bool RunCmds()

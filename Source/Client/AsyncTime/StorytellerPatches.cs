@@ -123,6 +123,11 @@ static class MapContextIncidentExecute
 {
     static void Prefix(IncidentParms parms, ref Map __state)
     {
+        // This may be running inside a context already: TryExecute nests on
+        // quest-spawn incidents, and tickingWorld stays true throughout
+        if (AsyncTimeComp.tickingMap != null)
+            return;
+
         if (AsyncWorldTimeComp.tickingWorld && parms.target is Map map)
         {
             AsyncTimeComp.tickingMap = map;

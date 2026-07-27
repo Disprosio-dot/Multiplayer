@@ -71,6 +71,15 @@ public class AsyncWorldTimeComp : IExposable, ITickable
 
     public int worldTicks;
 
+    // The global slot fields the world previously had no owner for. TimeSlower
+    // is transient in vanilla (never scribed), so a fresh instance is correct;
+    // gameStartAbsTick is captured at construction, which runs after
+    // ExposeSmallComponents has loaded the TickManager on every path
+    // (deserialization via SaveWorldComp, its comp-missing fallback, and the
+    // singleplayer conversion in HostUtil).
+    public TimeSlower slower = new();
+    public int worldGameStartAbsTick;
+
     public AsyncWorldTimeComp(World world)
     {
         this.world = world;
@@ -78,6 +87,8 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         // Use the world's constant rand seed as our initial randState.
         // Only fill the seed part, leave the iterations out.
         randState = (uint)world.ConstantRandSeed;
+
+        worldGameStartAbsTick = Find.TickManager?.gameStartAbsTick ?? 0;
     }
 
     public void ExposeData()
@@ -112,6 +123,11 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         Scribe_Values.Look(ref worldTicks, "worldTicks", -1);
         if (Scribe.mode == LoadSaveMode.LoadingVars && worldTicks < 0)
             worldTicks = Find.TickManager.TicksGame;
+
+        // Not scribed - always the global TickManager's value, re-derived on
+        // load in case the ctor ran before the meta components were current
+        if (Scribe.mode == LoadSaveMode.LoadingVars)
+            worldGameStartAbsTick = Find.TickManager.gameStartAbsTick;
     }
 
     public void Tick()
@@ -123,6 +139,13 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         {
             Find.TickManager.DoSingleTick();
             worldTicks++;
+
+            // PreContext installed worldTicks and DoSingleTick incremented the
+            // ambient, so the two can only disagree if something else moved one
+            // of them - which would silently shift every world-clock read
+            if (MpVersion.IsDebug && Find.TickManager.ticksGameInt != worldTicks)
+                Log.Error($"MP: world clock mismatch: ambient {Find.TickManager.ticksGameInt} != worldTicks {worldTicks}");
+
             Multiplayer.WorldComp.TickWorldSessions();
 
             if (ModsConfig.BiotechActive)
@@ -155,18 +178,18 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         }
     }
 
-    // The time speed is global on TickManager but per-tickable here, so the world
-    // tick has to put back what was installed before it. It didn't: the world's speed
-    // (the fastest running map) stayed installed for the rest of the frame, and every
-    // reader without its own context - TickRateMultiplier above all - believed time
-    // was running at that rate even while the viewed map was paused.
-    // Speed only; DoSingleTick's ticksGameInt increment IS the world clock.
-    private TimeSpeed? prevSpeed;
+// The world's clock lives on the global TickManager only while installed
+    // here; the world tick is self-contained. PreContext installs the full
+    // world snapshot - ticksGameInt = worldTicks, the scribed mirror that
+    // DoSingleTick's increment tracks - and PostContext restores whatever the
+    // frame had. Readers that want world time between ticks (letters, alerts,
+    // world render, saving) install it explicitly. A stack because world
+    // commands can nest a world context inside the world tick.
+    private readonly Stack<TimeSnapshot?> prevTimes = new();
 
     public void PreContext()
     {
-        prevSpeed = Find.TickManager.CurTimeSpeed;
-        Find.TickManager.CurTimeSpeed = DesiredTimeSpeed;
+        prevTimes.Push(TimeSnapshot.GetAndSetFromWorld());
         Rand.PushState();
         Rand.StateCompressed = randState;
 
@@ -190,11 +213,10 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         randState = Rand.StateCompressed;
         Rand.PopState();
 
-        if (prevSpeed.HasValue)
-        {
-            Find.TickManager.CurTimeSpeed = prevSpeed.Value;
-            prevSpeed = null;
-        }
+        if (prevTimes.Count == 0)
+            Log.Error("MP: unbalanced PostContext on the world clock");
+        else
+            prevTimes.Pop()?.Set();
     }
 
     public void ExecuteCmd(ScheduledCommand cmd)

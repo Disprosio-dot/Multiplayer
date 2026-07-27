@@ -159,9 +159,23 @@ namespace Multiplayer.Client
 
         public static TempGameData SaveGameData()
         {
-            var gameDoc = SaveGameToDoc();
-            var sessionData = SessionData.WriteSessionData();
-            return new TempGameData(gameDoc, sessionData);
+            // ExposeSmallComponents scribes the ambient TickManager state
+            // (ticksGameInt, gameStartAbsTick, curTimeSpeed), and join-point
+            // saves run on every client locally - so the save must be pinned
+            // to the world clock, or each client would scribe its own
+            // viewer's clock and their post-reload states would diverge
+            //. Covers SaveAndReload and both autosave paths.
+            var prev = TimeSnapshot.GetAndSetFromWorld();
+            try
+            {
+                var gameDoc = SaveGameToDoc();
+                var sessionData = SessionData.WriteSessionData();
+                return new TempGameData(gameDoc, sessionData);
+            }
+            finally
+            {
+                prev?.Set();
+            }
         }
 
         public static XmlDocument SaveGameToDoc()

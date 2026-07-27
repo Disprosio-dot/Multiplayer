@@ -66,6 +66,7 @@ namespace Multiplayer.Client.Saving
         static void Postfix()
         {
             CacheAverageTileTemperature.Clear();
+            Patches.ItemAccessibilityCacheInvalidation.Reset();
             Multiplayer.game?.OnDestroy();
             Multiplayer.game = null;
         }
