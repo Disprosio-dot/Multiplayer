@@ -44,13 +44,16 @@ public class AsyncWorldTimeComp : IExposable, ITickable
         };
     }
 
-    // Run at the speed of the fastest map or at chosen speed if there are no maps
+    // Run at the speed of the fastest map or at chosen speed if there are no maps.
+    // A map can be in Find.Maps before its AsyncTimeComp is registered (map
+    // generation, singleplayer conversion) - a comp-less map isn't a running map,
+    // so skip it rather than throw.
     public TimeSpeed DesiredTimeSpeed
     {
         get => !Find.Maps.Any()
             ? timeSpeedInt
             : Find.Maps.Select(m => m.AsyncTime())
-                .Where(a => a.ActualRateMultiplier(a.DesiredTimeSpeed) != 0f)
+                .Where(a => a != null && a.ActualRateMultiplier(a.DesiredTimeSpeed) != 0f)
                 .Max(a => a?.DesiredTimeSpeed) ?? TimeSpeed.Paused;
         set => timeSpeedInt = value;
     }

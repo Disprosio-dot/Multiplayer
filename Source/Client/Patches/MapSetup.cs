@@ -74,7 +74,11 @@ public static class MapSetup
         // reading it here would let clients disagree on a generated map's starting
         // speed. The world's DesiredTimeSpeed is what the global used to carry here
         // and is identical on every client.
-        if (!Multiplayer.GameComp.asyncTime)
+        //
+        // Not on the singleplayer-conversion path: it runs on one machine before any
+        // client exists, and at that point no map has its AsyncTimeComp yet, so the
+        // world's speed would read Paused and stomp the speed read above.
+        if (!usingMapTimeFromSingleplayer && !Multiplayer.GameComp.asyncTime)
             startingTimeSpeed = Multiplayer.AsyncWorldTime?.DesiredTimeSpeed ?? Find.TickManager.CurTimeSpeed;
 
         var asyncTimeCompForMap = new AsyncTimeComp(map, gameStartAbsTick)
