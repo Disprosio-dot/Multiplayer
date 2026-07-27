@@ -82,3 +82,61 @@ static class DefeatAllEnemiesQuestOwnerContext
             FactionExtensions.PopFaction();
     }
 }
+
+// When a mission's stamped destination map
+// is lost mid-flight, SendAway's private picker scans settlements for
+// Faction.OfPlayer - under the spectator world tick that matches nobody and
+// the faction-blind AnyPlayerHomeMap fallback unloads the mission's pawns and
+// loot at an arbitrary player colony. Push the mission owner so vanilla's own
+// scan starts matching; no body replication, no new scribed state.
+[HarmonyPatch(typeof(ShipJob_WaitSendable), "SendAway")]
+static class ShipJobWaitSendableOwnerContext
+{
+    static void Prefix(ShipJob_WaitSendable __instance, ref bool __state)
+    {
+        if (Multiplayer.Client == null || !Multiplayer.GameComp.multifaction)
+            return;
+
+        var owner = ResolveOwner(__instance);
+        if (owner == null || owner == Faction.OfPlayer)
+            return;
+
+        ((Map)null).PushFaction(owner);
+        __state = true;
+    }
+
+    static void Finalizer(bool __state)
+    {
+        if (__state)
+            FactionExtensions.PopFaction();
+    }
+
+    // Deterministic on every client: the quest table, the transporter's
+    // contents and DeterministicMapOwner are all synced state. The quest scan
+    // skips only Historical - never quest.hidden/dismissed like vanilla's
+    // gizmo scan, because dismissal is a per-client UI action.
+    static Faction ResolveOwner(ShipJob_WaitSendable job)
+    {
+        var shipThing = job.transportShip?.shipThing;
+        if (shipThing == null)
+            return null;
+
+        var quests = Find.QuestManager.QuestsListForReading;
+        for (int i = 0; i < quests.Count; i++)
+        {
+            if (quests[i].Historical)
+                continue;
+            if (quests[i].QuestLookTargets.Contains(shipThing) &&
+                QuestFactionOwnership.GetOwner(quests[i]) is { } questOwner)
+                return questOwner;
+        }
+
+        if (job.transportShip.TransporterComp?.innerContainer is { } held)
+            foreach (var thing in held)
+                if (thing is Pawn { RaceProps.Humanlike: true } pawn &&
+                    QuestFactionOwnership.IsOwnablePlayerFaction(pawn.Faction))
+                    return pawn.Faction;
+
+        return WorldTickOwnerContext.DeterministicMapOwner(shipThing.Map);
+    }
+}
