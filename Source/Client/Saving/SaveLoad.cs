@@ -8,6 +8,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Xml;
+using Multiplayer.Client.Patches;
 using Multiplayer.Client.Saving;
 using Multiplayer.Client.Util;
 using UnityEngine;
@@ -111,6 +112,8 @@ namespace Multiplayer.Client
             Multiplayer.AsyncWorldTime.cmds = mapCmds[ScheduledCommand.Global];
 
             Multiplayer.reloading = false;
+
+            VTRSync.ResendCurrentView();
 
             return gameData;
         }

@@ -82,6 +82,32 @@ namespace Multiplayer.Client.Patches
             lastMovedToMapId = InvalidMapId;
             lastSentAtTick = -1;
         }
+
+        // Every SaveAndReload recreates the time comps, zeroing every
+        // CurrentPlayerCount, while sends are suppressed by the reloading
+        // flag and MapSwitchPatch never re-fires for a player who stays on
+        // the same map. Without a re-announcement every viewed map is left
+        // at count 0 -> VTR 15 after each join point/rehost. Called by
+        // SaveAndReloadCore after the reloading flag clears; previous is
+        // InvalidMapId so the command increments the new map without
+        // decrementing anything (the old counts died with the old comps).
+        public static void ResendCurrentView()
+        {
+            if (Multiplayer.Client == null) return;
+
+            lastMovedToMapId = InvalidMapId;
+            lastSentAtTick = -1;
+
+            // wantedMode, not the CurrentWorldRenderMode getter: the getter
+            // is patched (WorldRenderModePatch) and must not run mid-install
+            int viewedId = Find.World?.renderer?.wantedMode == WorldRenderMode.Planet
+                ? WorldMapId
+                : Find.CurrentMap?.uniqueID ?? InvalidMapId;
+
+            if (viewedId == InvalidMapId) return;
+
+            SendViewedMapUpdate(InvalidMapId, viewedId);
+        }
     }
 
     [HarmonyPatch(typeof(Game), nameof(Game.CurrentMap), MethodType.Setter)]
