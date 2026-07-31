@@ -275,10 +275,15 @@ namespace Multiplayer.Client
         {
             if (map == null) return null;
 
+            // A map mid-generation is in Find.Maps before its AsyncTimeComp is
+            // registered - no comp means no map clock to install yet, same
+            // contract as the null-world guard in GetAndSetFromWorld
+            var mapComp = map.AsyncTime();
+            if (mapComp == null) return null;
+
             TimeSnapshot prev = Current();
 
             var tickManager = Find.TickManager;
-            var mapComp = map.AsyncTime();
 
             // Field, not the property: the vanilla setter silently drops
             // writes (and can emit a RejectInput message) when

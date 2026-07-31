@@ -52,7 +52,15 @@ namespace Multiplayer.Client
 
                 var maps = Find.Maps;
                 for (int i = maps.Count - 1; i >= 0; i--)
-                    yield return maps[i].AsyncTime();
+                {
+                    // Skip maps whose AsyncTimeComp isn't registered yet
+                    // (mid-session map generation) - every consumer derefs the
+                    // tickable, and a command aimed at such a map already
+                    // fails loud through RunCmds' TickableById null path.
+                    var comp = maps[i].AsyncTime();
+                    if (comp != null)
+                        yield return comp;
+                }
             }
         }
 
@@ -330,7 +338,14 @@ namespace Multiplayer.Client
 
             var rate = Multiplayer.AsyncWorldTime.TickRateMultiplier(speed);
             foreach (var map in Find.Maps)
-                rate = Math.Min(rate, map.AsyncTime().TickRateMultiplier(speed));
+            {
+                // A map can sit in Find.Maps before its AsyncTimeComp is
+                // registered (mid-session map generation). A comp-less map
+                // isn't a running map, so it can't bound the rate.
+                var comp = map.AsyncTime();
+                if (comp != null)
+                    rate = Math.Min(rate, comp.TickRateMultiplier(speed));
+            }
 
             return rate;
         }

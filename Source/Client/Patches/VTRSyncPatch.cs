@@ -73,7 +73,12 @@ namespace Multiplayer.Client.Patches
             else if (previous == current) return;
             int currentTick = Find.TickManager?.TicksGame ?? 0;
             MpLog.Debug($"VTR MapSwitchPatch: {lastMovedToMapId}->{current} @ tick {currentTick}{warn}");
-            Multiplayer.Client.SendCommand(CommandType.PlayerCount, ScheduledCommand.Global, ByteWriter.GetBytes(previous, current));
+            // Payload is an absolute announce (playerId, viewedMapId) into the
+            // synced view table, not a delta - re-announcing the same view is
+            // idempotent, so ResendCurrentView after a reload can never
+            // double-count and command ordering around join points can't
+            // drift the counts
+            Multiplayer.Client.SendCommand(CommandType.PlayerCount, ScheduledCommand.Global, ByteWriter.GetBytes(Multiplayer.session.playerId, current));
             lastMovedToMapId = current;
         }
 
@@ -83,14 +88,14 @@ namespace Multiplayer.Client.Patches
             lastSentAtTick = -1;
         }
 
-        // Every SaveAndReload recreates the time comps, zeroing every
-        // CurrentPlayerCount, while sends are suppressed by the reloading
-        // flag and MapSwitchPatch never re-fires for a player who stays on
-        // the same map. Without a re-announcement every viewed map is left
-        // at count 0 -> VTR 15 after each join point/rehost. Called by
-        // SaveAndReloadCore after the reloading flag clears; previous is
-        // InvalidMapId so the command increments the new map without
-        // decrementing anything (the old counts died with the old comps).
+        // Re-announce the local view after every SaveAndReload. The view
+        // table is scribed and the counts derive from it, so unlike the old
+        // incremental counts nothing is lost across a reload - but sends are
+        // suppressed while reloading and a view change during that window
+        // (or a fresh host with an empty table) would otherwise go
+        // unannounced. The announce is an absolute (playerId, mapId) write,
+        // so repeating an unchanged view is a no-op. Called by
+        // SaveAndReloadCore after the reloading flag clears.
         public static void ResendCurrentView()
         {
             if (Multiplayer.Client == null) return;

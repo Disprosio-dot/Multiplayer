@@ -95,7 +95,31 @@ namespace Multiplayer.Client
 
         public Queue<ScheduledCommand> cmds = new();
 
-        public int CurrentPlayerCount { get; private set; }
+        private int cachedPlayerCount;
+        private int cachedPlayerCountVersion = -1;
+
+        // Derived from the synced view table on demand, never incremented.
+        // The version gate makes the count self-healing: comps recreated by a
+        // reload start stale and re-derive on first read, so there is no
+        // window where a viewed map sits at the no-viewer rate.
+        public int CurrentPlayerCount
+        {
+            get
+            {
+                var gameComp = Multiplayer.GameComp;
+                if (cachedPlayerCountVersion != gameComp.playerViewsVersion)
+                {
+                    cachedPlayerCount = 0;
+                    foreach (var viewedMapId in gameComp.playerViewedMaps.Values)
+                        if (viewedMapId == map.uniqueID)
+                            cachedPlayerCount++;
+                    cachedPlayerCountVersion = gameComp.playerViewsVersion;
+                }
+
+                return cachedPlayerCount;
+            }
+        }
+
         public int VTR => CurrentPlayerCount > 0 ? VTRSync.MinimumVtr : VTRSync.MaximumVtr;
 
         public AsyncTimeComp(Map map, int gameStartAbsTick = 0)
@@ -220,11 +244,6 @@ namespace Multiplayer.Client
 
             Scribe_Custom.LookULong(ref randState, "randState", 1);
         }
-
-        public int IncreasePlayerCount() => CurrentPlayerCount += 1;
-        // This should never go below 0, this is just defensive programming. Hopefully not needed anymore, but
-        // nevertheless still left.
-        public int DecreasePlayerCount() => CurrentPlayerCount = Math.Max(0, CurrentPlayerCount - 1);
 
         public void FinalizeInit()
         {

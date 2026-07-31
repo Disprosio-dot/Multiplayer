@@ -61,8 +61,40 @@ public class AsyncWorldTimeComp : IExposable, ITickable
     public Queue<ScheduledCommand> Cmds => cmds;
     public Queue<ScheduledCommand> cmds = new();
 
-    public int CurrentPlayerCount { get; private set; }
-    public int VTR => CurrentPlayerCount > 0 ? VTRSync.MinimumVtr : VTRSync.MaximumVtr;
+    private int cachedPlanetViewerCount;
+    private int cachedPlayerCountVersion = -1;
+
+    // Players currently in the planet view, derived from the synced view
+    // table (see MultiplayerGameComp.playerViewedMaps). The old incremental
+    // count had no floor on this comp and a post-reload disconnect could
+    // drive it negative, pinning world objects at the no-viewer rate even
+    // with the planet view open.
+    public int CurrentPlayerCount
+    {
+        get
+        {
+            var gameComp = Multiplayer.GameComp;
+            if (cachedPlayerCountVersion != gameComp.playerViewsVersion)
+            {
+                cachedPlanetViewerCount = 0;
+                foreach (var viewedMapId in gameComp.playerViewedMaps.Values)
+                    if (viewedMapId == VTRSync.WorldMapId)
+                        cachedPlanetViewerCount++;
+                cachedPlayerCountVersion = gameComp.playerViewsVersion;
+            }
+
+            return cachedPlanetViewerCount;
+        }
+    }
+
+    // World objects run at full rate while anyone is connected, not only
+    // while someone has the planet view open. Vanilla's rate-15 default for
+    // an unwatched world assumes nobody can see it; in multiplayer caravans
+    // and world motion are visible from map view edges and the session is
+    // always watched by someone, and a permanently lumping world was field-
+    // reported as "world rendering strangeness". Derived from synced state,
+    // identical on every client.
+    public int VTR => Multiplayer.GameComp.playerViewedMaps.Count > 0 ? VTRSync.MinimumVtr : VTRSync.MaximumVtr;
 
     public int TickableId => -1;
 
@@ -282,23 +314,15 @@ public class AsyncWorldTimeComp : IExposable, ITickable
 
             if (cmdType == CommandType.PlayerCount)
             {
-                int previousMapId = data.ReadInt32();
-                int newMapId = data.ReadInt32();
-                int mapCount = Find.Maps.Count;
+                // Payload: (playerId, viewedMapId). InvalidMapId removes the
+                // entry (server-sent when the player disconnects). The VTR
+                // counts derive from the table - see
+                // MultiplayerGameComp.playerViewedMaps.
+                int playerId = data.ReadInt32();
+                int viewedMapId = data.ReadInt32();
+                Multiplayer.GameComp.SetPlayerViewedMap(playerId, viewedMapId);
 
-                var prev = -1;
-                if (previousMapId >= 0)
-                    prev = Find.Maps.FirstOrDefault(x => x.uniqueID == previousMapId)?.AsyncTime()?.DecreasePlayerCount() ?? -1;
-                else if (previousMapId == VTRSync.WorldMapId)
-                    prev = Multiplayer.AsyncWorldTime.CurrentPlayerCount -= 1;
-
-                var curr = -1;
-                if (newMapId >= 0)
-                    curr = Find.Maps.FirstOrDefault(x => x.uniqueID == newMapId)?.AsyncTime()?.IncreasePlayerCount() ?? -1;
-                else if (newMapId == VTRSync.WorldMapId)
-                    curr = Multiplayer.AsyncWorldTime.CurrentPlayerCount += 1;
-
-                MpLog.Debug($"[{worldTicks}|{Multiplayer.session.remoteTickUntil}] Player count change: previousMapId={previousMapId} ({prev}), newMapId={newMapId} ({curr}), mapCount={mapCount}");
+                MpLog.Debug($"[{worldTicks}|{Multiplayer.session.remoteTickUntil}] Player view: player={playerId}, map={viewedMapId}, views={Multiplayer.GameComp.playerViewedMaps.Count}");
             }
         }
         catch (Exception e)
