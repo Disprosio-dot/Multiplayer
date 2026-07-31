@@ -139,7 +139,11 @@ namespace Multiplayer.Client
         static void Prefix(PawnTweener __instance, ref TimeSnapshot? __state)
         {
             if (Multiplayer.Client == null || Current.ProgramState != ProgramState.Playing) return;
-            __state = TimeSnapshot.GetAndSetFromMap(__instance.pawn.Map);
+            // MapHeld, not Map: a carried/transported pawn has no map of its
+            // own, and with no install its tween ran under the viewer's clock
+            // (stamping lastDrawTick with it), then hard-snapped when a real
+            // clock returned. The holder's map clock is the motion's basis.
+            __state = TimeSnapshot.GetAndSetFromMap(__instance.pawn.MapHeld);
         }
 
         static void Postfix(TimeSnapshot? __state) => __state?.Set();
@@ -169,7 +173,16 @@ namespace Multiplayer.Client
         static void Prefix(Sustainer __instance, ref TimeSnapshot? __state)
         {
             if (Multiplayer.game == null) return;
-            __state = TimeSnapshot.GetAndSetFromMap(__instance.info.Maker.Map);
+            // Most sustainers have no map: the Sustainer constructor
+            // downgrades any def without world sub-sounds to OnCamera, making
+            // Maker invalid. Falling through with no install left those
+            // running under the viewed map's clock while Maintain() stamps
+            // the maintainer's ambient tick - a cross-clock pair that ends
+            // (and respawns) the sustainer every frame when the viewer's
+            // clock is ahead. The world clock is the only session-wide
+            // monotone basis, so install it for map-less sound code.
+            __state = TimeSnapshot.GetAndSetFromMap(__instance.info.Maker.Map)
+                      ?? TimeSnapshot.GetAndSetFromWorld();
         }
 
         static void Postfix(TimeSnapshot? __state) => __state?.Set();
@@ -181,10 +194,34 @@ namespace Multiplayer.Client
         static void Prefix(Sample __instance, ref TimeSnapshot? __state)
         {
             if (Multiplayer.game == null) return;
-            __state = TimeSnapshot.GetAndSetFromMap(__instance.Map);
+            // World-clock fallback for map-less samples - see
+            // SustainerUpdateMapTime above
+            __state = TimeSnapshot.GetAndSetFromMap(__instance.Map)
+                      ?? TimeSnapshot.GetAndSetFromWorld();
         }
 
         static void Postfix(TimeSnapshot? __state) => __state?.Set();
+    }
+
+    // The one-shot reaper decides "finished" partly from Find.TickManager.Paused,
+    // which under the viewer install is the VIEWED map's pause state: a paused
+    // viewer never reaps finished tempo-affected one-shots, they accumulate, and
+    // the voice limiter then cuts/restarts sounds on every new play. The world
+    // clock pauses only when the whole session does, so reaping tracks actual
+    // sim activity. Per-sample Update calls nest their own map/world snapshots
+    // inside this bracket (SampleUpdateMapTime).
+    [HarmonyPatch(typeof(SampleOneShotManager), nameof(SampleOneShotManager.SampleOneShotManagerUpdate))]
+    static class OneShotReaperWorldTime
+    {
+        [HarmonyPriority(MpPriority.MpFirst)]
+        static void Prefix(ref TimeSnapshot? __state)
+        {
+            if (Multiplayer.game == null) return;
+            __state = TimeSnapshot.GetAndSetFromWorld();
+        }
+
+        [HarmonyPriority(MpPriority.MpLast)]
+        static void Finalizer(TimeSnapshot? __state) => __state?.Set();
     }
 
     [HarmonyPatch(typeof(TipSignal), MethodType.Constructor, new[] { typeof(Func<string>), typeof(int) })]

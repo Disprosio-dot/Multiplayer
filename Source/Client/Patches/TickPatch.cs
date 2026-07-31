@@ -198,7 +198,7 @@ namespace Multiplayer.Client
         // and every sim path installs its own context on entry (the world
         // tick installs its own count), so this value is never a simulation
         // input.
-        private static void InstallViewerTimeContext()
+        internal static void InstallViewerTimeContext()
         {
             // Null checks cover the join/load window where Multiplayer.game
             // (and with it the async comps) lags Multiplayer.Client
@@ -369,6 +369,23 @@ namespace Multiplayer.Client
         public static void SetTimer(int value) => Timer = value;
 
         public static ITickable TickableById(int tickableId) => AllTickables.FirstOrDefault(t => t.TickableId == tickableId);
+    }
+
+    // Root_Play.Update runs RealTime.Update, PortraitsCache and UIRootUpdate
+    // BEFORE TickManagerUpdate, where the frame's viewer context is normally
+    // installed - so those consumers read the PREVIOUS frame's residual
+    // ambient (e.g. unpausedTime advances by a stale TickRateMultiplier,
+    // making pausable-animated materials move in bursts). Install the viewer
+    // context at the top of the frame too; the sim still installs its own
+    // contexts on entry, so this is render/UI-only like the post-tick install.
+    [HarmonyPatch(typeof(Root_Play), nameof(Root_Play.Update))]
+    static class FrameStartViewerContext
+    {
+        static void Prefix()
+        {
+            if (Multiplayer.Client == null) return;
+            TickPatch.InstallViewerTimeContext();
+        }
     }
 
     public class SimulatingData

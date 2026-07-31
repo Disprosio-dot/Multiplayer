@@ -237,7 +237,18 @@ public class AsyncWorldTimeComp : IExposable, ITickable
     {
         if (Multiplayer.GameComp.multifaction)
         {
-            var f = FactionExtensions.PopFaction();
+            // Restore must be unconditional: PreContext swapped EVERY map onto
+            // the spectator faction's data (resourceCounter, zone/area/
+            // designation managers), and leaving any map on it corrupts every
+            // UI read until something else swaps it back (alternating only on
+            // frames that ran a world tick - a per-frame flicker/re-ping
+            // shape). A balanced pop returns the pre-world-tick OfPlayer,
+            // which is the client-local faction, so falling back to
+            // RealPlayerFaction on an unbalanced pop restores the same thing
+            // the balanced path would have. This is the faction half of the
+            // same PreContext/PostContext imbalance whose speed half caused
+            // the paused-map time-context bug.
+            var f = FactionExtensions.PopFaction() ?? Multiplayer.RealPlayerFaction;
             foreach (var map in Find.Maps)
                 map.MpComp().SetFaction(f);
         }
