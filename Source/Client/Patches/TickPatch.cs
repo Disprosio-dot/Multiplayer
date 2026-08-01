@@ -173,6 +173,7 @@ namespace Multiplayer.Client
             if (Multiplayer.Client == null) return;
 
             InstallViewerTimeContext();
+            Patches.FactionResidueGuard.HealAfterTicks();
 
             // AsyncTime() can be null while a join or load is mid-flight
             // (Multiplayer.game lags Client in that window)

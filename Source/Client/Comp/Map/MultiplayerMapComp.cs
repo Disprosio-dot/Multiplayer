@@ -111,9 +111,20 @@ namespace Multiplayer.Client
                 foreach (var data in factionData)
                 {
                     map.PushFaction(data.Key);
-                    data.Value.listerHaulables.ListerHaulablesTick();
-                    data.Value.resourceCounter.ResourceCounterTick();
-                    map.PopFaction();
+                    try
+                    {
+                        data.Value.listerHaulables.ListerHaulablesTick();
+                        data.Value.resourceCounter.ResourceCounterTick();
+                    }
+                    finally
+                    {
+                        // A throw here still aborts the remaining factions
+                        // (caught and surfaced at the tickable level), but it
+                        // must not strand this faction's data as the map's
+                        // installed managers - that shifts the faction context
+                        // stack and corrupts UI reads for the whole session
+                        map.PopFaction();
+                    }
                 }
             }
             finally

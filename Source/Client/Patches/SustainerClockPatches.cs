@@ -39,7 +39,10 @@ namespace Multiplayer.Client.Patches
             var now = Time.realtimeSinceStartup;
             if (now - lastRescueReport < 60f) return;
             lastRescueReport = now;
-            MpLog.Debug($"Sustainer cross-clock rescue: {sustainer.def} ambient={ambientTicks} stamp={staleStamp} ({rescueCount} rescues since last report)");
+            // MpLog.Log, not Debug: Debug is [Conditional("DEBUG")] and
+            // compiled out of the Release zips the field actually runs -
+            // this line is field evidence, it must exist there
+            MpLog.Log($"Sustainer cross-clock rescue: {sustainer.def} ambient={ambientTicks} stamp={staleStamp} ({rescueCount} rescues since last report)");
             rescueCount = 0;
         }
     }

@@ -205,6 +205,11 @@ namespace Multiplayer.Client
         // the outer snapshot, leaking the inner clock for the rest of the frame.
         private readonly Stack<TimeSnapshot?> prevTimes = new();
 
+        // Expected faction stack depth per nested bracket, recorded at
+        // PreContext exit - PostContext unwinds any entries stranded above it
+        // by an exception before doing its own pop (see UnwindFactionStack)
+        private readonly Stack<int> prevFactionDepths = new();
+
         public void PreContext()
         {
             map.PushFaction(
@@ -212,6 +217,8 @@ namespace Multiplayer.Client
                     ? map.ParentFaction
                     : Multiplayer.WorldComp.spectatorFaction,
                 force: true);
+
+            prevFactionDepths.Push(FactionContext.stack.Count);
 
             prevTimes.Push(TimeSnapshot.GetAndSetFromMap(map));
 
@@ -231,6 +238,11 @@ namespace Multiplayer.Client
 
             randState = Rand.StateCompressed;
             Rand.PopState();
+
+            if (prevFactionDepths.Count == 0)
+                Log.Error($"MP: unbalanced faction depth on {this}");
+            else
+                FactionExtensions.UnwindFactionStack(map, prevFactionDepths.Pop(), $"map {map.uniqueID} bracket");
 
             map.PopFaction();
         }

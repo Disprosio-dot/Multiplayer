@@ -219,6 +219,9 @@ public class AsyncWorldTimeComp : IExposable, ITickable
     // commands can nest a world context inside the world tick.
     private readonly Stack<TimeSnapshot?> prevTimes = new();
 
+    // Expected faction stack depth per nested bracket - see AsyncTimeComp
+    private readonly Stack<int> prevFactionDepths = new();
+
     public void PreContext()
     {
         prevTimes.Push(TimeSnapshot.GetAndSetFromWorld());
@@ -231,10 +234,20 @@ public class AsyncWorldTimeComp : IExposable, ITickable
             foreach (var map in Find.Maps)
                 map.MpComp().SetFaction(Multiplayer.WorldComp.spectatorFaction);
         }
+
+        // Recorded unconditionally: the command path pushes the command's
+        // faction after PreContext even outside multifaction, and a throw in
+        // the handler must not strand it
+        prevFactionDepths.Push(FactionContext.stack.Count);
     }
 
     public void PostContext()
     {
+        if (prevFactionDepths.Count == 0)
+            Log.Error("MP: unbalanced faction depth on the world clock");
+        else
+            FactionExtensions.UnwindFactionStack(null, prevFactionDepths.Pop(), "world bracket");
+
         if (Multiplayer.GameComp.multifaction)
         {
             // Restore must be unconditional: PreContext swapped EVERY map onto
