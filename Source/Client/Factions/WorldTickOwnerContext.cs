@@ -7,7 +7,7 @@ using Verse;
 namespace Multiplayer.Client.Factions;
 
 // Multifaction: WorldObjectComp ticking runs under the spectator world tick,
-// so core-side Faction.OfPlayer gates in those paths match nobody. Two sites
+// so core-side Faction.OfPlayer gates in those paths match nobody. Sites
 // with the same root cause:
 // - TimedForcedExit.ForceReform gathers `x.Faction == Faction.OfPlayer` pawns
 //   and reforms via ExitMapAndCreateCaravan(.., Faction.OfPlayer): under the
@@ -16,7 +16,11 @@ namespace Multiplayer.Client.Factions;
 // - DefeatAllEnemiesQuestComp.CompTickInterval checks
 //   AnyHostileActiveThreatToPlayer and delivers rewards to AnyPlayerHomeMap:
 //   completion misdetects and the letter/rewards misfire for everyone.
-// Both get the deterministic owner of the site map pushed around the body.
+// - CaravansBattlefield.CheckWonBattle uses AnyHostileActiveThreatToPlayer and
+//   FreeColonists.RandomElement for the victory tale/letter: under Spectator
+//   FreeColonists is empty on every client (ParentFaction is enemy/null, so the
+//   existing WorldObjectMethodPatches push cannot install a player owner).
+// Each gets the deterministic owner of the site map pushed around the body.
 static class WorldTickOwnerContext
 {
     // Deterministic "whose map is this" for maps without a player parent
@@ -74,6 +78,26 @@ static class DefeatAllEnemiesQuestOwnerContext
     {
         if (__instance.Active && __instance.parent is MapParent { HasMap: true } mapParent)
             __state = WorldTickOwnerContext.PushOwnerOf(mapParent.Map);
+    }
+
+    static void Finalizer(bool __state)
+    {
+        if (__state)
+            FactionExtensions.PopFaction();
+    }
+}
+
+// CaravansBattlefield.CheckWonBattle is private; ParentFaction is typically
+// the ambushers (or null), so WorldObjectMethodPatches cannot push a player
+// owner. Push the deterministic map owner so FreeColonists / victory letter
+// see the caravan faction instead of Spectator.
+[HarmonyPatch(typeof(CaravansBattlefield), "CheckWonBattle")]
+static class CaravansBattlefieldWonBattleOwnerContext
+{
+    static void Prefix(CaravansBattlefield __instance, ref bool __state)
+    {
+        if (__instance.HasMap)
+            __state = WorldTickOwnerContext.PushOwnerOf(__instance.Map);
     }
 
     static void Finalizer(bool __state)
