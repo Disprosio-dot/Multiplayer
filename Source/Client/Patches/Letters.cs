@@ -63,6 +63,10 @@ namespace Multiplayer.Client.Patches
                 && __instance.disappearAtTick == Find.TickManager.TicksGame + 1
                 && defaultChoices.TryGetValue(__instance.GetType(), out var tuple))
             {
+                // Give the players more time before forcing the default choice
+                if (LetterTimeoutExtensions.TryExtend(__instance))
+                    return false;
+
                 if (tuple.method.IsStatic)
                     tuple.handler(null, __instance);
                 else
