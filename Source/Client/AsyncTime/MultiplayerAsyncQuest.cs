@@ -131,24 +131,14 @@ namespace Multiplayer.Client.Comp
         private static readonly Dictionary<AsyncTimeComp, List<Quest>> mapQuestsCache = new Dictionary<AsyncTimeComp, List<Quest>>();
         private static readonly List<Quest> worldQuestsCache = new List<Quest>();
 
-        //List of quest parts that have mapParent as field
-        private static readonly List<Type> questPartsToCheck = new List<Type>()
-        {
-            typeof(QuestPart_DropPods),
-            typeof(QuestPart_SpawnThing),
-            typeof(QuestPart_PawnsArrive),
-            typeof(QuestPart_Incident),
-            typeof(QuestPart_RandomRaid),
-            typeof(QuestPart_ThreatsGenerator),
-            typeof(QuestPart_Infestation),
-            typeof(QuestPart_GameCondition),
-            typeof(QuestPart_JoinPlayer),
-            typeof(QuestPart_TrackWhenExitMentalState),
-            typeof(QuestPart_RequirementsToAcceptBedroom),
-            typeof(QuestPart_MechCluster),
-            typeof(QuestPart_DropMonumentMarkerCopy),
-            typeof(QuestPart_PawnsAvailable)
-        };
+        // #169: every non-abstract QuestPart (vanilla, DLC or mod) with a MapParent
+        // "mapParent" field, discovered by reflection instead of a hardcoded list.
+        // Initialized on first use, after all mod assemblies are loaded.
+        private static readonly Dictionary<Type, FieldInfo> questPartMapParentFields =
+            typeof(QuestPart).AllSubclassesNonAbstract()
+                .Select(t => (type: t, field: AccessTools.Field(t, "mapParent")))
+                .Where(x => x.field != null && !x.field.IsStatic && typeof(MapParent).IsAssignableFrom(x.field.FieldType))
+                .ToDictionary(x => x.type, x => x.field);
 
         /// <summary>
         /// Tries to remove Map from cache, then moves all Quests cached to that map to WorldQuestsCache
@@ -267,10 +257,10 @@ namespace Multiplayer.Client.Comp
         /// <returns>MapAsyncTimeComp for that quest or Null if not found</returns>
         private static AsyncTimeComp TryGetQuestMap(Quest quest)
         {
-            //Really terrible way to determine if any quest parts have a map which also has an async time
-            foreach (var part in quest.parts.Where(x => x != null && questPartsToCheck.Contains(x.GetType())))
+            foreach (var part in quest.parts.Where(x => x != null))
             {
-                if (part.GetType().GetField("mapParent")?.GetValue(part) is MapParent { Map: not null } mapParent)
+                if (questPartMapParentFields.TryGetValue(part.GetType(), out var mapParentField) &&
+                    mapParentField.GetValue(part) is MapParent { Map: not null } mapParent)
                 {
                     var mapAsyncTimeComp = mapParent.Map.IsPlayerHome ? mapParent.Map.AsyncTime() : null;
                     if (mapAsyncTimeComp != null) return mapAsyncTimeComp;
