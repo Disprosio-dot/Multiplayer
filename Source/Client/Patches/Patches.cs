@@ -460,6 +460,20 @@ namespace Multiplayer.Client
     {
         static bool Prefix(DiaOption __instance)
         {
+            // Multifaction: a quest dialog's choices belong to the quest's owner.
+            // Gate only the initiating click - synced replay and ticking must pass
+            // on every client or dialog and game state would diverge. Esc still
+            // closes the local window for non-owners.
+            if (Multiplayer.Client != null && Multiplayer.GameComp.multifaction
+                && !Multiplayer.ExecutingCmds && !Multiplayer.Ticking
+                && QuestDialogOwnership.currentDialogOwner is { } questOwner
+                && Multiplayer.RealPlayerFaction != questOwner)
+            {
+                Messages.Message("MpQuestChoiceOwnerOnly".Translate(questOwner.Name),
+                    MessageTypeDefOf.RejectInput, historical: false);
+                return false;
+            }
+
             if (Multiplayer.session == null || !SyncUtil.isDialogNodeTreeOpen || !(__instance.dialog is Dialog_NodeTree dialog))
             {
                 SyncUtil.isDialogNodeTreeOpen = false;
