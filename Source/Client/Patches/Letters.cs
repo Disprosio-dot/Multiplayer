@@ -14,11 +14,15 @@ namespace Multiplayer.Client.Patches
     [HarmonyPatch(typeof(LetterStack), nameof(LetterStack.LetterStackUpdate))]
     static class CloseLettersDuringSimulating
     {
-        // Close info letters during simulation and for the arbiter instance
+        // Arbiter only: it has no player to dismiss letters, so info letters are
+        // cleared to keep its stack bounded. Regular clients used to get the same
+        // treatment while simulating (letters vanished 4 seconds after arrival
+        // during catch-up); they now keep their letters like in singleplayer, so
+        // the stack after a catch-up shows what happened while away.
         static void Postfix(LetterStack __instance)
         {
             if (Multiplayer.Client == null) return;
-            if (!TickPatch.Simulating && !Multiplayer.arbiterInstance) return;
+            if (!Multiplayer.arbiterInstance) return;
 
             for (int i = __instance.letters.Count - 1; i >= 0; i--)
             {

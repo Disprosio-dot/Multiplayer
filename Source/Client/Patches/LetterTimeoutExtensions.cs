@@ -46,3 +46,34 @@ static class ClearLetterTimeoutExtensions
 {
     static void Postfix(Letter let) => LetterTimeoutExtensions.Forget(let);
 }
+
+// Timed letters don't auto-open in MP (DontAutoOpenLettersOnTimeout), so a
+// choice could expire unseen. Warn the concerned players one day and one hour
+// before a letter's timeout instead. Runs in synced ticking on every client
+// holding the letter; CancelFeedbackNotTargetedAtMe keeps the message from
+// players whose faction isn't concerned. Warnings re-arm naturally after a
+// timeout extension pushes the expiry back past a threshold.
+[HarmonyPatch(typeof(LetterStack), nameof(LetterStack.LetterStackTick))]
+static class WarnBeforeLetterTimeout
+{
+    private static readonly int[] WarningThresholds = { GenDate.TicksPerDay, GenDate.TicksPerHour };
+
+    static void Postfix(LetterStack __instance)
+    {
+        if (Multiplayer.Client == null || TickPatch.Simulating) return;
+
+        var ticksGame = Find.TickManager.TicksGame;
+        for (int i = 0; i < __instance.letters.Count; i++)
+        {
+            if (__instance.letters[i] is not LetterWithTimeout { TimeoutActive: true } letter)
+                continue;
+
+            var remaining = letter.disappearAtTick - ticksGame;
+            foreach (var threshold in WarningThresholds)
+                if (remaining == threshold)
+                    Messages.Message(
+                        "MpLetterExpiringSoon".Translate(letter.Label, remaining.ToStringTicksToPeriod()),
+                        letter.lookTargets, MessageTypeDefOf.NeutralEvent, historical: false);
+        }
+    }
+}
