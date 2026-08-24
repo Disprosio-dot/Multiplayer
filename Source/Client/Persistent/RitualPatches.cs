@@ -69,8 +69,21 @@ namespace Multiplayer.Client.Persistent
                     (session.data.ritual != tempDialog.ritual ||
                      session.data.outcome != tempDialog.outcome))
                 {
-                    Messages.Message("MpAnotherRitualInProgress".Translate(), MessageTypeDefOf.RejectInput, false);
-                    return false;
+                    // Grouped ritual gizmos sync ShowRitualBeginWindow once per
+                    // ideology for a single click (rwmt#506). Mirror singleplayer's
+                    // last-window-wins: a session opened earlier in this same tick
+                    // is replaced by the next one; a session from an earlier tick
+                    // is genuinely in progress and still rejects.
+                    if (session.createdAtTick == Find.TickManager.TicksGame)
+                    {
+                        comp.sessionManager.RemoveSession(session);
+                        session = null;
+                    }
+                    else
+                    {
+                        Messages.Message("MpAnotherRitualInProgress".Translate(), MessageTypeDefOf.RejectInput, false);
+                        return false;
+                    }
                 }
 
                 if (session == null)

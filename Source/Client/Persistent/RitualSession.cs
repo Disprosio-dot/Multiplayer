@@ -10,11 +10,17 @@ public class RitualSession : SemiPersistentSession
     public Map map;
     public RitualData data;
 
+    // Tick this session was created in, on the map's clock. Set during synced
+    // command execution, so identical on every client; not saved - it only
+    // matters within the creation tick (same-tick replacement, rwmt#506).
+    public int createdAtTick;
+
     public override Map Map => map;
 
     public RitualSession(Map map) : base(map)
     {
         this.map = map;
+        createdAtTick = Find.TickManager.TicksGame;
     }
 
     public RitualSession(Map map, RitualData data) : this(map)
