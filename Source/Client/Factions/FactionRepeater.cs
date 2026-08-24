@@ -182,6 +182,29 @@ namespace Multiplayer.Client
             );
     }
 
+    // rwmt#669: tick every player faction's own scenario under its context, so
+    // ongoing ScenParts (guaranteed incidents, timed effects) fire for the
+    // faction that picked them. Multifaction only - in plain MP the single
+    // shared scenario keeps the vanilla tick.
+    [HarmonyPatch(typeof(Scenario), nameof(Scenario.TickScenario))]
+    static class ScenarioTickPatch
+    {
+        static bool ignore;
+
+        static bool Prefix()
+        {
+            if (Multiplayer.Client == null || !Multiplayer.GameComp.multifaction)
+                return true;
+
+            return FactionRepeater.Template(
+                Multiplayer.game?.worldComp.factionData,
+                d => d.scenario?.TickScenario(),
+                null,
+                ref ignore
+            );
+        }
+    }
+
     [HarmonyPatch(typeof(ResearchManager), nameof(ResearchManager.Notify_MonolithLevelChanged))]
     static class MonolithLevelChangedPatch
     {

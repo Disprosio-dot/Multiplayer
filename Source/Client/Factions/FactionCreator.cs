@@ -58,6 +58,12 @@ public static class FactionCreator
                 creationData.chooseIdeoInfo
             );
 
+            // rwmt#669: keep the chosen scenario as this faction's own (an
+            // independent copy - the def's instance is shared) so its ongoing
+            // ScenParts tick for this faction and Find.Scenario swaps to it
+            if (Multiplayer.WorldComp.factionData.TryGetValue(newFaction.loadID, out var newFactionData))
+                newFactionData.scenario = scenario.CopyForEditing();
+
             if (creationData.generateMap)
                 using (MpScope.PushFaction(newFaction))
                 {

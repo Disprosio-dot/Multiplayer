@@ -106,6 +106,13 @@ public class MultiplayerWorldComp : IHasSessionData
         if (Multiplayer.GameComp.multifaction)
             Factions.QuestFactionOwnership.BackfillOwnership();
 
+        // rwmt#669: legacy factions have no per-faction scenario - give each an
+        // independent copy of the shared game scenario so ticking and Find.Scenario
+        // swaps behave identically on every client (deterministic: sorted dict).
+        if (Multiplayer.GameComp.multifaction)
+            foreach (var (_, data) in factionData)
+                data.scenario ??= Current.Game.Scenario.CopyForEditing();
+
         // Fix old save files by ensuring all factions have access to Anomaly research if
         // it was enabled. This needs to be done since Anomaly state is shared by all players.
         var anomaly = Find.Anomaly;
@@ -191,6 +198,12 @@ public class MultiplayerWorldComp : IHasSessionData
         game.history = data.history;
         game.storyteller = data.storyteller;
         game.storyWatcher = data.storyWatcher;
+
+        // rwmt#669: per-faction scenario, so Find.Scenario reads (stat factors,
+        // disabled quests, guaranteed incidents) resolve for the pushed faction.
+        // Multifaction only, and only once backfill guarantees every faction has one.
+        if (Multiplayer.GameComp.multifaction && data.scenario != null)
+            game.Scenario = data.scenario;
 
         if (data.analysisManager != null)
             game.analysisManager = data.analysisManager;

@@ -18,6 +18,13 @@ public class FactionWorldData : IExposable
     public Storyteller storyteller;
     public StoryWatcher storyWatcher;
 
+    // rwmt#669: each player faction's scenario (starting scenario chosen at
+    // faction creation). Swapped into Game.Scenario by SetFaction so every
+    // vanilla Find.Scenario read (stat factors, disabled quests, guaranteed
+    // incidents) resolves per faction. Null on legacy saves until FinalizeInit
+    // backfills it with a copy of the shared game scenario.
+    public Scenario scenario;
+
     public AnalysisManager analysisManager;
     public FactionBossgroupData bossgroup;
 
@@ -62,6 +69,7 @@ public class FactionWorldData : IExposable
         Scribe_Deep.Look(ref history, "history");
         Scribe_Deep.Look(ref storyteller, "storyteller");
         Scribe_Deep.Look(ref storyWatcher, "storyWatcher");
+        Scribe_Deep.Look(ref scenario, "scenario");
 
         Scribe_Deep.Look(ref analysisManager, "analysisManager");
         Scribe_Deep.Look(ref bossgroup, "bossgroup");
@@ -147,6 +155,7 @@ public class FactionWorldData : IExposable
             history = Find.History,
             storyteller = Find.Storyteller,
             storyWatcher = Find.StoryWatcher,
+            scenario = Current.Game.Scenario,
 
             analysisManager = Current.Game.analysisManager,
             bossgroup = FactionBossgroupData.FromCurrent(),
