@@ -302,11 +302,11 @@ namespace Multiplayer.Client
         }
     }
 
-    [HarmonyPatch(typeof(NamePlayerFactionAndSettlementUtility), nameof(NamePlayerFactionAndSettlementUtility.CanNameAnythingNow))]
-    static class NoNamingInMultiplayer
-    {
-        static bool Prefix() => Multiplayer.Client == null;
-    }
+    // rwmt#4 / known-issues: the name-your-faction/settlement prompts are allowed
+    // again. The vanilla gates are viewer-relative (Faction.OfPlayer in the UI is
+    // the local player's faction), so each player is prompted for their own
+    // unnamed faction and settlements; the dialogs funnel into two static
+    // utilities registered as SyncMethods in SyncMethods.cs.
 
     [HarmonyPatch(typeof(DirectXmlSaver), nameof(DirectXmlSaver.XElementFromObject), typeof(object), typeof(Type), typeof(string), typeof(FieldInfo), typeof(bool))]
     static class ExtendDirectXmlSaver

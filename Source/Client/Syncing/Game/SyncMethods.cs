@@ -427,6 +427,12 @@ namespace Multiplayer.Client
             // It can display confirmation like royal implant (no longer used?) or implanting IUD (if it would terminate pregnancy).
             // On top of that, in case of implanting the Xenogerm recipe, it will open a dialog with list of available options.
             SyncMethod.Register(typeof(HealthCardUtility), nameof(HealthCardUtility.CreateSurgeryBill)).SetPostInvoke(TryDirtyCurrentPawnTable);
+            // rwmt#4: the name-your-faction/settlement prompts (unblocked in
+            // Patches.cs) funnel into these. Synced commands execute in the
+            // issuer's faction context, so each player names their own faction.
+            SyncMethod.Register(typeof(NamePlayerFactionDialogUtility), nameof(NamePlayerFactionDialogUtility.Named));
+            SyncMethod.Register(typeof(NamePlayerSettlementDialogUtility), nameof(NamePlayerSettlementDialogUtility.Named)).CancelIfAnyArgNull();
+
             // rwmt#796: retire a lost player faction (soft delete) - host only
             SyncMethod.Register(typeof(Factions.FactionRetirement), nameof(Factions.FactionRetirement.RetireFaction)).SetHostOnly();
 
