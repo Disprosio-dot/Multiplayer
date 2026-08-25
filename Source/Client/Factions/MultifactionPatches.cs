@@ -25,8 +25,11 @@ public static class MainTabWindow_QuestsDoRowPatch
     {
         if (Multiplayer.Client != null && !Multiplayer.settings.hideOtherPlayersQuests)
         {
-            Faction playerFaction;
-            if (quest.TryGetPlayerFaction(out playerFaction))
+            // The ownership registry is authoritative (stamped at generation);
+            // look-target inference is only a fallback - it fails for quests
+            // whose targets aren't settlements, like relic hunts
+            var playerFaction = QuestFactionOwnership.GetOwner(quest);
+            if (playerFaction != null || quest.TryGetPlayerFaction(out playerFaction))
             {
                 Rect iconRect = new Rect(rect.x + 2f, rect.y + 2f, 4f, rect.height - 4f);
                 Widgets.DrawBoxSolid(iconRect, playerFaction.Color);
@@ -75,8 +78,11 @@ public static class MainTabWindow_QuestsShouldListNowPatch
     {
         if (Multiplayer.Client != null && Multiplayer.settings.hideOtherPlayersQuests)
         {
-            Faction playerFaction;
-            if (quest.TryGetPlayerFaction(out playerFaction) && playerFaction != Faction.OfPlayer)
+            var playerFaction = QuestFactionOwnership.GetOwner(quest);
+            if (playerFaction == null)
+                quest.TryGetPlayerFaction(out playerFaction);
+
+            if (playerFaction != null && playerFaction != Faction.OfPlayer)
             {
                 __result = false;
                 return false;
