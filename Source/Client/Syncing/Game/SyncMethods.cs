@@ -430,7 +430,10 @@ namespace Multiplayer.Client
             // rwmt#358: the dev-mode delete button on the health tab hediff list
             // calls this straight from the UI, desyncing every removal. Debug-only:
             // the server already rejects debug-only sync commands without dev mode.
-            SyncMethod.Register(typeof(Pawn_HealthTracker), nameof(Pawn_HealthTracker.RemoveHediff)).SetDebugOnly();
+            // The tracker itself isn't serializable - send the pawn instead.
+            SyncMethod.Register(typeof(Pawn_HealthTracker), nameof(Pawn_HealthTracker.RemoveHediff))
+                .TransformTarget(Serializer.New(t => t.pawn, (Pawn p) => p.health))
+                .SetDebugOnly();
 
             // Comp explosive
             SyncMethod.Register(typeof(CompExplosive), nameof(CompExplosive.StartWick)); // Called from Building_BlastingCharge (and some modded) gizmos

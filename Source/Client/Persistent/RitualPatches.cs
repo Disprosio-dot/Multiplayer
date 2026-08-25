@@ -115,6 +115,8 @@ namespace Multiplayer.Client.Persistent
                     }
 
                     session = comp.CreateRitualSession(data);
+                    if (session != null)
+                        session.createdAtTick = Find.TickManager.TicksGame;
                 }
 
                 if (TickPatch.currentExecutingCmdIssuedBySelf)
