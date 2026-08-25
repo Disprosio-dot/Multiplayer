@@ -21,7 +21,7 @@ namespace Multiplayer.Client.Patches;
 [HarmonyPatch(typeof(MainTabWindow_Quests), nameof(MainTabWindow_Quests.DoRow))]
 public static class MainTabWindow_QuestsDoRowPatch
 {
-    public static void Prefix(ref Rect rect, Quest quest)
+    public static void Prefix(ref Rect rect, Quest quest, ref (Rect rowRect, Faction otherFaction) __state)
     {
         if (Multiplayer.Client != null && !Multiplayer.settings.hideOtherPlayersQuests)
         {
@@ -32,12 +32,39 @@ public static class MainTabWindow_QuestsDoRowPatch
                 Widgets.DrawBoxSolid(iconRect, playerFaction.Color);
                 rect.xMin += 8f;
                 TooltipHandler.TipRegion(rect, "MpQuestDesc".Translate(playerFaction.Name, playerFaction == Faction.OfPlayer ? ". (you)" : "."));
+
+                if (playerFaction != Faction.OfPlayer)
+                    __state = (rect, playerFaction);
             }
             else
             {
                 TooltipHandler.TipRegion(rect, "MpPublicQuest".Translate());
             }
         }
+    }
+
+    // Another player's quest: dim the row and overlay whose quest it is,
+    // then repaint the faction color bar on top of the veil
+    public static void Postfix((Rect rowRect, Faction otherFaction) __state)
+    {
+        if (__state.otherFaction == null)
+            return;
+
+        Widgets.DrawBoxSolid(__state.rowRect, new Color(0f, 0f, 0f, 0.65f));
+
+        Rect iconRect = new Rect(__state.rowRect.x - 6f, __state.rowRect.y + 2f, 4f, __state.rowRect.height - 4f);
+        Widgets.DrawBoxSolid(iconRect, __state.otherFaction.Color);
+
+        var prevAnchor = Text.Anchor;
+        var prevFont = Text.Font;
+        var prevColor = GUI.color;
+        Text.Anchor = TextAnchor.MiddleCenter;
+        Text.Font = GameFont.Small;
+        GUI.color = new Color(1f, 1f, 1f, 0.9f);
+        Widgets.Label(__state.rowRect, "MpOtherFactionQuest".Translate(__state.otherFaction.Name));
+        Text.Anchor = prevAnchor;
+        Text.Font = prevFont;
+        GUI.color = prevColor;
     }
 }
 
