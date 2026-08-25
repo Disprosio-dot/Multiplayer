@@ -162,6 +162,10 @@ public class AsyncWorldTimeComp : IExposable, ITickable
             worldGameStartAbsTick = Find.TickManager.gameStartAbsTick;
     }
 
+    // rwmt#641: a join point requested while a gravship was travelling waits
+    // here until the ship lands (sim state, so identical on every client)
+    private static bool createJoinPointPending;
+
     public void Tick()
     {
         tickingWorld = true;
@@ -169,6 +173,12 @@ public class AsyncWorldTimeComp : IExposable, ITickable
 
         try
         {
+            if (createJoinPointPending && !GravshipSaveGuard.SavingBlocked)
+            {
+                createJoinPointPending = false;
+                LongEventHandler.QueueLongEvent(CreateJoinPointAndSendIfHost, "MpCreatingJoinPoint", false, null);
+            }
+
             Find.TickManager.DoSingleTick();
             worldTicks++;
 
@@ -326,7 +336,17 @@ public class AsyncWorldTimeComp : IExposable, ITickable
                 if (Multiplayer.session?.ConnectedToStandaloneServer == true && !TickPatch.currentExecutingCmdIssuedBySelf)
                     return;
 
-                LongEventHandler.QueueLongEvent(CreateJoinPointAndSendIfHost, "MpCreatingJoinPoint", false, null);
+                // rwmt#641: snapshotting mid-gravship-transit corrupts the save
+                // (gravship + crew not deep-saved). Defer until it lands; the
+                // guard reads sim state, so every client defers and retries at
+                // the same ticks (retry in Tick()).
+                if (GravshipSaveGuard.SavingBlocked)
+                {
+                    createJoinPointPending = true;
+                    Log.Message("MP: join point deferred, a gravship is travelling");
+                }
+                else
+                    LongEventHandler.QueueLongEvent(CreateJoinPointAndSendIfHost, "MpCreatingJoinPoint", false, null);
             }
 
             if (cmdType == CommandType.InitPlayerData)

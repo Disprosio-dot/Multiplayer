@@ -8,6 +8,13 @@ public class ConvertToSp
 {
     public static void DoConvert()
     {
+        // rwmt#641: converting saves the game - corrupting if a gravship is travelling
+        if (GravshipSaveGuard.SavingBlocked)
+        {
+            Messages.Message("MpSaveBlockedGravship".Translate(), MessageTypeDefOf.RejectInput, false);
+            return;
+        }
+
         LongEventHandler.QueueLongEvent(() =>
         {
             SaveReplay();

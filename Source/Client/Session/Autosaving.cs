@@ -13,6 +13,14 @@ public static class Autosaving
 {
     public static void DoAutosave()
     {
+        // rwmt#641: saving mid-gravship-transit corrupts the save. Skip this
+        // cycle; the next interval saves normally. Deterministic on all clients.
+        if (GravshipSaveGuard.SavingBlocked)
+        {
+            Log.Message("MP: autosave skipped, a gravship is travelling");
+            return;
+        }
+
         LongEventHandler.QueueLongEvent(() =>
         {
             var snapshot = SaveLoad.CreateGameDataSnapshot(SaveLoad.SaveGameData(), false);
