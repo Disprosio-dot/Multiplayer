@@ -427,6 +427,10 @@ namespace Multiplayer.Client
             // It can display confirmation like royal implant (no longer used?) or implanting IUD (if it would terminate pregnancy).
             // On top of that, in case of implanting the Xenogerm recipe, it will open a dialog with list of available options.
             SyncMethod.Register(typeof(HealthCardUtility), nameof(HealthCardUtility.CreateSurgeryBill)).SetPostInvoke(TryDirtyCurrentPawnTable);
+            // rwmt#358: the dev-mode delete button on the health tab hediff list
+            // calls this straight from the UI, desyncing every removal. Debug-only:
+            // the server already rejects debug-only sync commands without dev mode.
+            SyncMethod.Register(typeof(Pawn_HealthTracker), nameof(Pawn_HealthTracker.RemoveHediff)).SetDebugOnly();
 
             // Comp explosive
             SyncMethod.Register(typeof(CompExplosive), nameof(CompExplosive.StartWick)); // Called from Building_BlastingCharge (and some modded) gizmos
