@@ -230,7 +230,27 @@ namespace Multiplayer.Client.AsyncTime
             if (Multiplayer.Client == null) return;
 
             // The newly generated map
-            Find.Maps.LastOrDefault()?.AsyncTime().slower.SignalForceNormalSpeedShort();
+            var newMap = Find.Maps.LastOrDefault();
+            newMap?.AsyncTime().slower.SignalForceNormalSpeedShort();
+
+            // rwmt#512: vanilla pauses unconditionally here - a caravan just
+            // spawned onto a potentially hostile map (ambush, site assault) -
+            // but the suppression above left the fight running while nobody
+            // watched. Same synced-pause recipe as PauseOnLetter below, not
+            // gated by the letter setting since singleplayer always pauses
+            // this one. Runs in sim, so identical on every client.
+            if (Multiplayer.GameComp.asyncTime)
+            {
+                var tickable = (ITickable)newMap?.AsyncTime() ?? Multiplayer.AsyncWorldTime;
+                tickable.DesiredTimeSpeed = TimeSpeed.Paused;
+                Multiplayer.GameComp.ResetAllTimeVotes(tickable.TickableId);
+            }
+            else
+            {
+                Multiplayer.AsyncWorldTime.SetTimeEverywhere(TimeSpeed.Paused);
+                foreach (var tickable in TickPatch.AllTickables)
+                    Multiplayer.GameComp.ResetAllTimeVotes(tickable.TickableId);
+            }
         }
     }
 
