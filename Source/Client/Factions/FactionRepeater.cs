@@ -23,12 +23,23 @@ namespace Multiplayer.Client
                 if (id == spectatorId)
                     continue;
 
-                // Retired factions (rwmt#796) no longer tick their storyteller,
-                // history, scenario and friends
-                if (Find.FactionManager.GetById(id) is { defeated: true })
+                var faction = Find.FactionManager.GetById(id);
+                if (faction == null)
                     continue;
 
-                map.PushFaction(id);
+                // Retired factions (rwmt#796) no longer tick their storyteller,
+                // history, scenario and friends
+                if (faction.defeated)
+                    continue;
+
+                // Forced push: the unforced variant skips the whole swap when
+                // ambient ofPlayer already equals the iterated faction - but on
+                // a client whose ambient DATA lags ofPlayer (retire/create
+                // windows; the residue guard heals exactly these), the repeat
+                // then read another faction's history/research and storyteller
+                // comps gated on them diverged between clients (live desync:
+                // MechanitorComplexQuest's datacore gate)
+                map.PushFaction(faction, force: true);
                 try
                 {
                     dataProcessor(data);
