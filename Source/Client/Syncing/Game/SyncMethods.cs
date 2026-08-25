@@ -433,6 +433,7 @@ namespace Multiplayer.Client
             // The tracker itself isn't serializable - send the pawn instead.
             SyncMethod.Register(typeof(Pawn_HealthTracker), nameof(Pawn_HealthTracker.RemoveHediff))
                 .TransformTarget(Serializer.New(t => t.pawn, (Pawn p) => p.health))
+                .CancelIfAnyArgNull() // hediff gone by execution time (healed or repeated clicks) = nothing to do
                 .SetDebugOnly();
 
             // Comp explosive

@@ -161,11 +161,15 @@ namespace Multiplayer.Client
                             return;
                         }
 
-                        hediff = pawn.health.hediffSet.hediffs.First(x => x.loadID == id);
+                        // FirstOrDefault, not First: the hediff can be gone by the time
+                        // the command executes (healed, or already removed by an earlier
+                        // command from repeated clicks). The null branch below was dead
+                        // code before - handlers using CancelIfAnyArgNull now drop cleanly.
+                        hediff = pawn.health.hediffSet.hediffs.FirstOrDefault(x => x.loadID == id);
 
                         if (hediff == null)
                         {
-                            Log.Error($"Multiplayer :: SyncDictionary.Hediff: Unknown hediff {id}");
+                            Log.Warning($"Multiplayer :: SyncDictionary.Hediff: Unknown hediff {id} on {pawn} - the synced call will receive null or be cancelled");
                         }
                     }
                 }, true // implicit
