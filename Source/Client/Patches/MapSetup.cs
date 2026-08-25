@@ -40,13 +40,48 @@ public static class MapSetup
         if (!usingMapTimeFromSingleplayer && !Multiplayer.GameComp.asyncTime)
             async.DesiredTimeSpeed = Multiplayer.AsyncWorldTime?.DesiredTimeSpeed ?? Find.TickManager.CurTimeSpeed;
 
-        // Store all current managers for Faction.OfPlayer
-        InitFactionDataFromMap(map, Faction.OfPlayer);
+        // rwmt#518: keying this on ambient Faction.OfPlayer desynced - when map
+        // generation runs outside a pushed faction context (entering a quest
+        // site), OfPlayer is the viewer's faction, so every client initialized
+        // a DIFFERENT faction's data from the generated map and per-faction
+        // forbiddance/area state diverged (desync at the first door). Use a
+        // faction every client agrees on instead.
+        var initFaction = DeterministicInitFaction(map);
+        InitFactionDataFromMap(map, initFaction);
 
-        // Add all other (non Faction.OfPlayer) factions to the map
         foreach (var faction in Find.FactionManager.AllFactions.Where(f => f.IsPlayer))
-            if (faction != Faction.OfPlayer)
+            if (faction != initFaction)
                 InitNewFactionData(map, faction);
+
+        // Things generated with the map start unforbidden for EVERY player
+        // faction, not just whichever faction ran the setup - uniform and
+        // deterministic, and whoever enters a site map can interact with its
+        // contents without unforbidding everything by hand
+        foreach (var faction in Find.FactionManager.AllFactions.Where(f => f.IsPlayer))
+        {
+            if (faction == initFaction)
+                continue;
+
+            var unforbidden = mapComp.customFactionData[faction.loadID].unforbidden;
+            foreach (var t in map.listerThings.AllThings)
+                if (t is ThingWithComps tc && tc.GetComp<CompForbiddable>() is { forbiddenInt: false })
+                    unforbidden.Add(t);
+        }
+    }
+
+    // The map's player parent faction (new colony maps), else the lowest-loadID
+    // player faction - identical on every client, unlike ambient Faction.OfPlayer
+    private static Faction DeterministicInitFaction(Map map)
+    {
+        var spectator = Multiplayer.WorldComp?.spectatorFaction;
+
+        if (map.ParentFaction is { IsPlayer: true } parent && parent != spectator)
+            return parent;
+
+        return Find.FactionManager.AllFactionsListForReading
+            .Where(f => f.IsPlayer && f != spectator)
+            .OrderBy(f => f.loadID)
+            .FirstOrDefault() ?? Faction.OfPlayer;
     }
 
     private static AsyncTimeComp CreateAsyncTimeCompForMap(Map map, bool usingMapTimeFromSingleplayer)
