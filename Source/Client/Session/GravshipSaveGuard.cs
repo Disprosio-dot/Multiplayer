@@ -13,7 +13,15 @@ namespace Multiplayer.Client;
 // retries at the same ticks.
 public static class GravshipSaveGuard
 {
+    // Three windows, all simulation state (deterministic on every client):
+    // - controller.gravship set: world-map transit
+    // - Game.Gravship set: from takeoff through the end of the landing cutscene
+    //   (the controller clears ITS reference at InitiateLanding, the Game one
+    //   only at LandingEnded - saves in between dangled exactly this reference)
+    // - landing marker up: landing site selection
     public static bool SavingBlocked =>
         ModsConfig.OdysseyActive &&
-        Find.GravshipController is { IsGravshipTravelling: true };
+        (Current.Game?.Gravship != null ||
+         Find.GravshipController is { } c &&
+         (c.IsGravshipTravelling || c.LandingAreaConfirmationInProgress));
 }

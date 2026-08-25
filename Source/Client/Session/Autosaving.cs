@@ -67,6 +67,17 @@ public static class Autosaving
 
     public static bool SaveGameToFile_Overwrite(string fileNameNoExtension, GameDataSnapshot snapshot)
     {
+        // rwmt#641: serializing fresh state mid-gravship-transit corrupts the
+        // save. This is the funnel for every file save (manual pause-menu Save,
+        // desync-window Save, SP conversion): refuse when a fresh snapshot
+        // would be taken. Writing an already-taken snapshot to disk is safe.
+        if (snapshot == null && GravshipSaveGuard.SavingBlocked)
+        {
+            Messages.Message("MpSaveBlockedGravship".Translate(), MessageTypeDefOf.RejectInput, false);
+            Log.Message("MP: manual save refused, a gravship is travelling or landing");
+            return false;
+        }
+
         Log.Message($"Multiplayer: saving to file {fileNameNoExtension}");
 
         try
