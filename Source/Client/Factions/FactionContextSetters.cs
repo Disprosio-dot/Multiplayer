@@ -165,3 +165,34 @@ static class CleanupTileFactionContext
             TileFactionContext.ClearTile(parent.Tile);
     }
 }
+
+// rwmt#963: the caller-context patches above pin Faction.OfPlayer for map
+// generation, but bare FactionContext.Push doesn't swap the per-faction world
+// data - Find.ResearchManager stayed the local viewer's, so generation-time
+// content that reads research state (techprint crates) rolled from different
+// candidate lists per client: same item slot, different tech, and extra Rand
+// draws shifting everything downstream (trace-hash desync). Swap the world
+// data to match OfPlayer for the duration of generation; the finalizer
+// restores whichever faction's data was active before, so an exception can't
+// leave another faction's research installed.
+[HarmonyPatch(typeof(MapGenerator), nameof(MapGenerator.GenerateMap))]
+static class MapGenFactionDataPatch
+{
+    static void Prefix(ref Faction __state)
+    {
+        if (Multiplayer.Client == null || !Multiplayer.GameComp.multifaction)
+            return;
+        if (Faction.OfPlayer is not { } genFaction)
+            return;
+
+        __state = Find.FactionManager.GetById(
+            Multiplayer.WorldComp.GetFactionId(Find.ResearchManager));
+        Multiplayer.WorldComp.SetFaction(genFaction);
+    }
+
+    static void Finalizer(Faction __state)
+    {
+        if (__state != null)
+            Multiplayer.WorldComp.SetFaction(__state);
+    }
+}
