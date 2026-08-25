@@ -61,7 +61,7 @@ namespace Multiplayer.Client
 
         private static void DrawFactionChooser(Rect inRect)
         {
-            var allPlayerFactions = Find.FactionManager.AllFactions.Where(f => f.IsPlayer).Where(f => f.name != "Spectator");
+            var allPlayerFactions = Find.FactionManager.AllFactions.Where(f => f.IsPlayer && !f.defeated).Where(f => f.name != "Spectator");
 
             // Join Faction Headline
             inRect.yMin += 5f;

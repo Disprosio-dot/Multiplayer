@@ -23,6 +23,11 @@ namespace Multiplayer.Client
                 if (id == spectatorId)
                     continue;
 
+                // Retired factions (rwmt#796) no longer tick their storyteller,
+                // history, scenario and friends
+                if (Find.FactionManager.GetById(id) is { defeated: true })
+                    continue;
+
                 map.PushFaction(id);
                 try
                 {

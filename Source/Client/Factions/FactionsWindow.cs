@@ -26,7 +26,7 @@ public class FactionsWindow : Window
         Layouter.BeginArea(inRect);
         Layouter.BeginScroll(ref scroll, spacing: 0f);
 
-        var factions = Find.FactionManager.AllFactions.Where(f => f.IsPlayer).ToList();
+        var factions = Find.FactionManager.AllFactions.Where(f => f.IsPlayer && !f.defeated).ToList();
 
         void DrawFactionInLastRect(Faction faction)
         {
@@ -66,6 +66,20 @@ public class FactionsWindow : Window
                 }
 
                 TooltipHandler.TipRegion(colorRect, "MpChangeFactionColor".Translate());
+
+                // Host only: retire a lost faction (rwmt#796)
+                if (Multiplayer.LocalServer != null &&
+                    Multiplayer.GameComp.multifaction &&
+                    faction != Multiplayer.WorldComp.spectatorFaction)
+                {
+                    if (Layouter.Button("X", 20f, 20f))
+                        Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                            "MpRetireFactionConfirm".Translate(faction.Name),
+                            () => FactionRetirement.RetireFaction(faction),
+                            destructive: true));
+
+                    TooltipHandler.TipRegion(Layouter.LastRect(), "MpRetireFactionDesc".Translate());
+                }
             }
             Layouter.EndHorizontal();
 

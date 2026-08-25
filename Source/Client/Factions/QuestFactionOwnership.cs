@@ -32,7 +32,7 @@ public static class QuestFactionOwnership
     }
 
     public static bool IsOwnablePlayerFaction(Faction f) =>
-        f is { IsPlayer: true } && f != Multiplayer.WorldComp.spectatorFaction;
+        f is { IsPlayer: true, defeated: false } && f != Multiplayer.WorldComp.spectatorFaction;
 
     public static Faction ResolveOwner(Quest quest, Faction contextFaction)
     {
