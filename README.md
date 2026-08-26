@@ -46,16 +46,6 @@ Based on the upstream `dev` branch plus [PR #961](https://github.com/rwmt/Multip
 - Letters survive reconnection instead of closing themselves after 4 seconds
 - Dev mode actions (like removing hediffs from the health tab) are properly synced
 
-## Install
-
-1. **Disable the official Multiplayer mod.** This fork replaces it, don't run both.
-2. Get the zip from [Releases](https://github.com/Disprosio-dot/Multiplayer/releases) and unzip the `Multiplayer-Multifaction` folder into `RimWorld/Mods/`.
-3. Put it right below Core and the expansions in your mod list.
-4. You need RimWorld 1.6 (at least 1.6.4491) and [Prepatcher](https://steamcommunity.com/sharedfiles/filedetails/?id=2934420800).
-5. **The host and every client need this exact same build.** Different versions won't connect, or worse, will desync.
-
-Back up your saves before switching, as always.
-
 ## How tested is this?
 
 The big things (parallel relic hunts, faction retirement, the ideoligion editor, the gravship save block, dev mode) are confirmed in our own games, two instances, real sessions. Some of the smaller fixes are waiting for their situation to come up naturally in play. If something breaks for you, the most useful things to share are the desync report (`MpDesyncs` folder in your RimWorld user data) or a screenshot of the Debug log.
@@ -64,7 +54,7 @@ Things I'd like to do next: per-faction Anomaly monolith, multiple gravships, th
 
 ## About AI
 
-I should be upfront about this: I built this fork pair-programming with AI (Claude). I review, test and understand every change that goes in — nothing lands without being played first — but if AI-assisted mods aren't something you want to use, that's a fair position, and the official mod is [right here](https://github.com/rwmt/Multiplayer).
+This build was made to be used inside a group of friends, so I never worried about how heavily AI was involved: it's built pair-programming with AI (Claude), a lot of it. We just wanted our own personal adventure to work, and in a way we got exactly that. Everything still gets reviewed and play-tested in our real sessions before it lands — but if AI-assisted mods aren't something you want to use, that's a fair position, and the official mod is [right here](https://github.com/rwmt/Multiplayer).
 
 Fixes that make sense for everyone will be offered upstream as proper pull requests.
 
