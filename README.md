@@ -1,58 +1,78 @@
-> # ⚠️ Unofficial Multifaction Fork
->
-> This is a working fork of [rwmt/Multiplayer](https://github.com/rwmt/Multiplayer) by **Gesprosio**, built on top of the `dev` branch plus [PR #961](https://github.com/rwmt/Multiplayer/pull/961) by CormacOConnor72. It focuses on making **multifaction** games feel like everyone is playing their own singleplayer story on a shared planet.
->
-> **What it adds/fixes** (full changelog in the commit history):
-> - Quest ownership: quests, dialog choices, letters and epic quest chains (relic hunts!) belong to the right player's faction; parallel relic quests, one per ideoligion
-> - **Custom and fluid ideoligions at faction creation** for joining players — full in-game editor, no more singleplayer detour
-> - Per-faction scenarios, deterministic map generation, identical techprint crates
-> - **Faction retirement**: remove a lost player faction cleanly (settlements, caravans, pawns), players return to spectator
-> - Save corruption fix: saving while a gravship is in transit is blocked (the file came out unloadable)
-> - Naming prompts for faction/colony re-enabled, caravan events pause the game, pod targeter soft-lock fixed, several real desyncs diagnosed and killed
->
-> **Install**: replaces the official Multiplayer mod — do not enable both. Host and all clients must run this **exact same build**. Download from [Releases](https://github.com/Disprosio-dot/Multiplayer/releases), drop the folder into `RimWorld/Mods/`, place right below Core and expansions. Requires [Prepatcher](https://steamcommunity.com/sharedfiles/filedetails/?id=2934420800).
->
-> **Transparency**: developed in pair-programming with AI (Claude by Anthropic), with every change reviewed, documented and play-tested in real multiplayer games. License stays MIT. Credits: Zetrith and the RimWorld Multiplayer Team, CormacOConnor72 (base PR), cmlee119 and TMaGoYT (approaches referenced from issue threads).
->
-> Fixes that make sense upstream will be offered as targeted PRs to rwmt/Multiplayer.
+# Multiplayer — Multifaction Fork
 
----
+Unofficial fork of [rwmt/Multiplayer](https://github.com/rwmt/Multiplayer) focused on multifaction play, where every player runs their own colony and faction on the same planet.
 
-![banner](https://user-images.githubusercontent.com/49448379/134965756-2a30ffd9-2f6c-43d6-a2a4-584252fc2e4b.png)
+My friend and I have been playing multifaction for a while and kept running into the same problems: the relic quest chain never advanced, events kept hitting the wrong colony, dialog choices went to whoever clicked first, joining players could only pick preset ideoligions, and we desynced a lot. Most of this is known on the upstream tracker, but multifaction is a niche mode and understandably not the priority over there. So I started fixing the things that were in our way, and this fork is the result.
 
+The idea I kept in mind while working on it: each player should feel like they're playing their own singleplayer game, with all the choices the game normally offers, just on a shared planet.
 
+Based on the upstream `dev` branch plus [PR #961](https://github.com/rwmt/Multiplayer/pull/961) by CormacOConnor72, which already fixed a lot of the per-faction event routing. Everything else is in the commit history.
 
-The RimWorld Multiplayer mod allows users to play full games of Rimworld cooperatively.
+**[Download the latest release here.](https://github.com/Disprosio-dot/Multiplayer/releases)**
 
-## Links
-[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=2606448745) |
-[Website](https://rimworldmultiplayer.com) |
-[Discord](https://discord.gg/S4bxXpv) |
-[Documentation](https://hackmd.io/@rimworldmultiplayer/docs/)
+## What's changed
 
-## Development
-[Git Releases](https://github.com/rwmt/Multiplayer/releases) |
-[Installation](https://hackmd.io/@rimworldmultiplayer/docs/https%3A%2F%2Fhackmd.io%2F%40rimworldmultiplayer%2Fplay%23Installation) |
-[Hosting](https://hackmd.io/@rimworldmultiplayer/docs/https%3A%2F%2Fhackmd.io%2F%40rimworldmultiplayer%2Fplay%23Installation#Hosting-and-Joining) |
-[FAQ](https://hackmd.io/@rimworldmultiplayer/docs/https%3A%2F%2Fhackmd.io%2F%40rimworldmultiplayer%2Ffaq%23Common-Questions#FAQ) |
-[Contributing](https://github.com/rwmt/Multiplayer/blob/master/CONTRIBUTORS.md) |
-[DEV Wiki](https://hackmd.io/@rimworldmultiplayer/docs/https%3A%2F%2Fhackmd.io%2F%40rimworldmultiplayer%2Fdev-home)
+**Quests actually belong to someone now**
 
-Please do all pull requests to the [dev](https://github.com/rwmt/Multiplayer/tree/dev) branch.
+- Quests are owned by the faction they were generated for: letters, dialog choices and rewards go to that player, and nobody else can answer in their place
+- Other players see a "«faction»'s quest" entry in the quest log instead of the full details
+- Choice letters wait longer before force-picking a default (+1 day, up to twice, with a warning before they expire)
+- Epic quest chains run in parallel: each ideoligion gets its own relic hunt, so one player's quest no longer blocks everyone else's
 
-## Donations
+**You can create your own ideoligion in game**
 
-If you’re feeling generous these are people who have contributed greatly to the mod’s development and upkeep.
+- Joining players get the full vanilla ideoligion editor right in the faction creation flow: memes, precepts, rituals, styles, everything
+- Fluid ideoligions work too
+- Before this you had to start a singleplayer game, build the ideoligion there, save it to a file and load it in multiplayer (that still works, if you have files lying around)
+- The editor works on a detached copy that only gets rebuilt into the game through a synced command — that's why it doesn't desync
 
-**[Zetrith](https://patreon.com/zetrith)** - Creator, Core, Support\
-**[NotFood](https://ko-fi.com/notfood)** - Core, Mod Compatiblity, Compatibility Commissions\
-**[Sokyran](https://ko-fi.com/sokyran)** - Core, Mod Compatiblity, Compatibility Commissions\
-[Nebual](https://ko-fi.com/Nebual) - Core\
-[Thomas107500](https://ko-fi.com/thomas107500) - Mod Compatiblity\
-[Luz](https://ko-fi.com/llavorre) - Support, Admin\
-[Mistress Mia](https://ko-fi.com/miaamakiir) - Support, Admin\
-[Swept](https://ko-fi.com/swept) - Support, Admin, Website
+**Faction management**
 
-## Notes
-Thanks to Pardeike for making [Harmony](https://github.com/pardeike/Harmony) and RevenantX for creating [LiteNetLib](https://github.com/RevenantX/LiteNetLib)
+- The host can retire a failed or abandoned player faction from the Factions window: settlements get abandoned properly, caravans and leftover pawns are cleaned up, and its players go back to spectator so they can start a new colony (getting this desync-free took three rounds of debugging with real desync reports)
+- Each faction plays its own scenario, not the host's
+- Faction and colony naming prompts work again, and each player names their own
 
+**Stability**
+
+- Saves can no longer be corrupted by gravships: saving mid-transit produced a broken file (ship and crew just missing), now all save paths wait until you've landed — saving in orbit is fine, same as vanilla
+- Three real desyncs diagnosed from actual desync reports and fixed at the root
+- A vanilla bug in "Usually..." precepts made the RNG stream unstable in multiplayer — neutralized
+- Map generation for quest sites is deterministic now, so all clients get identical loot and techprint crates
+
+**Smaller stuff**
+
+- Caravan ambushes pause the game like in singleplayer, instead of quietly killing your caravan while nobody watches
+- The transport pod targeter can't soft-lock anymore when two players aim the same pods
+- Letters survive reconnection instead of closing themselves after 4 seconds
+- Dev mode actions (like removing hediffs from the health tab) are properly synced
+
+## Install
+
+1. **Disable the official Multiplayer mod.** This fork replaces it, don't run both.
+2. Get the zip from [Releases](https://github.com/Disprosio-dot/Multiplayer/releases) and unzip the `Multiplayer-Multifaction` folder into `RimWorld/Mods/`.
+3. Put it right below Core and the expansions in your mod list.
+4. You need RimWorld 1.6 (at least 1.6.4491) and [Prepatcher](https://steamcommunity.com/sharedfiles/filedetails/?id=2934420800).
+5. **The host and every client need this exact same build.** Different versions won't connect, or worse, will desync.
+
+Back up your saves before switching, as always.
+
+## How tested is this?
+
+The big things (parallel relic hunts, faction retirement, the ideoligion editor, the gravship save block, dev mode) are confirmed in our own games, two instances, real sessions. Some of the smaller fixes are waiting for their situation to come up naturally in play. If something breaks for you, the most useful things to share are the desync report (`MpDesyncs` folder in your RimWorld user data) or a screenshot of the Debug log.
+
+Things I'd like to do next: per-faction Anomaly monolith, multiple gravships, the Archonexus ending in multifaction.
+
+## About AI
+
+I should be upfront about this: I built this fork pair-programming with AI (Claude). I review, test and understand every change that goes in — nothing lands without being played first — but if AI-assisted mods aren't something you want to use, that's a fair position, and the official mod is [right here](https://github.com/rwmt/Multiplayer).
+
+Fixes that make sense for everyone will be offered upstream as proper pull requests.
+
+## Credits and license
+
+- **Zetrith** and the **RimWorld Multiplayer Team** made and maintain the actual mod. If you want to support someone, [support them](https://github.com/rwmt/Multiplayer#donations).
+- **CormacOConnor72** wrote PR #961, which this whole fork stands on.
+- **cmlee119** and **TMaGoYT** shared approaches in upstream issue threads that I picked up.
+- MIT license, same as upstream.
+
+[Official mod](https://github.com/rwmt/Multiplayer) · [Discord](https://discord.gg/S4bxXpv) · [FAQ and docs](https://hackmd.io/@rimworldmultiplayer/docs/) · [Releases](https://github.com/Disprosio-dot/Multiplayer/releases)
