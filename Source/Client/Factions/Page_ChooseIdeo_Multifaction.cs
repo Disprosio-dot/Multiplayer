@@ -110,7 +110,10 @@ public class Page_ChooseIdeo_Multifaction : Page
     }
 
     // Clicking the matching kind re-edits the current custom ideo; the other
-    // kind starts fresh (the editor's Done replaces the custom on delivery)
+    // kind starts fresh (the editor's Done replaces the custom on delivery).
+    // Done also advances straight to the next stitched page (pawn config) -
+    // bouncing back to this chooser just to click Next again was a dead stop;
+    // Back from the pawn page still returns here to change the choice.
     private void OpenEditor(bool startFluid)
     {
         var existing = customIdeo != null && customIdeo.Fluid == startFluid ? customIdeo : null;
@@ -118,6 +121,8 @@ public class Page_ChooseIdeo_Multifaction : Page
         {
             customIdeo = edited;
             pageChooseIdeo.selectedIdeo = null;
+            if (CanDoNext())
+                DoNext();
         }, startFluid));
     }
 
