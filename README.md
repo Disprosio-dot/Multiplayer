@@ -2,6 +2,9 @@
 
 Unofficial fork of [rwmt/Multiplayer](https://github.com/rwmt/Multiplayer) focused on multifaction play, where every player runs their own colony and faction on the same planet.
 
+> [!IMPORTANT]
+> **About AI** — This build was made to be used inside a group of friends, so I never worried about how heavily AI was involved: it's built pair-programming with AI (Claude), *a lot of it*. We just wanted our own personal adventure to work, and in a way we got exactly that. Everything still gets reviewed and play-tested in our real sessions before it lands — but if AI-assisted mods aren't something you want to use, that's a fair position, and the official mod is [right here](https://github.com/rwmt/Multiplayer).
+
 My friend and I have been playing multifaction for a while and kept running into the same problems: the relic quest chain never advanced, events kept hitting the wrong colony, dialog choices went to whoever clicked first, joining players could only pick preset ideoligions, and we desynced a lot. Most of this is known on the upstream tracker, but multifaction is a niche mode and understandably not the priority over there. So I started fixing the things that were in our way, and this fork is the result.
 
 The idea I kept in mind while working on it: each player should feel like they're playing their own singleplayer game, with all the choices the game normally offers, just on a shared planet.
@@ -51,10 +54,6 @@ Based on the upstream `dev` branch plus [PR #961](https://github.com/rwmt/Multip
 The big things (parallel relic hunts, faction retirement, the ideoligion editor, the gravship save block, dev mode) are confirmed in our own games, two instances, real sessions. Some of the smaller fixes are waiting for their situation to come up naturally in play. If something breaks for you, the most useful things to share are the desync report (`MpDesyncs` folder in your RimWorld user data) or a screenshot of the Debug log.
 
 Things I'd like to do next: per-faction Anomaly monolith, multiple gravships, the Archonexus ending in multifaction.
-
-## About AI
-
-This build was made to be used inside a group of friends, so I never worried about how heavily AI was involved: it's built pair-programming with AI (Claude), a lot of it. We just wanted our own personal adventure to work, and in a way we got exactly that. Everything still gets reviewed and play-tested in our real sessions before it lands — but if AI-assisted mods aren't something you want to use, that's a fair position, and the official mod is [right here](https://github.com/rwmt/Multiplayer).
 
 Fixes that make sense for everyone will be offered upstream as proper pull requests.
 
