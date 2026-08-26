@@ -63,7 +63,8 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Normalise stack trace file locations">
-    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=$(AssemblyName)/</PathMap>
+    <!-- NuGet content files (e.g. Publicizer's attribute source) otherwise embed the local package root -->
+    <PathMap>$(NuGetPackageRoot)=nuget/,$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=$(AssemblyName)/</PathMap>
   </PropertyGroup>
 
   <Target Name="CopyToRimworld" AfterTargets="Build">

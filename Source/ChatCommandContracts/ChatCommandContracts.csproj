@@ -8,4 +8,8 @@
     <AssemblyName>MultiplayerChatCommandContracts</AssemblyName>
   </PropertyGroup>
 
+  <PropertyGroup Label="Normalise stack trace file locations">
+    <PathMap>$(NuGetPackageRoot)=nuget/,$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=$(AssemblyName)/</PathMap>
+  </PropertyGroup>
+
 </Project>
