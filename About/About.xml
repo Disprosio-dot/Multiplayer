@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
   <packageId>rwmt.Multiplayer</packageId>
-  <name>Multiplayer</name>
+  <name>Multiplayer (Multifaction Fork)</name>
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
-  <author>RimWorld Multiplayer Team</author>
-  <url>https://github.com/rwmt/Multiplayer</url>
+  <author>RimWorld Multiplayer Team (fork by Gesprosio)</author>
+  <url>https://github.com/Disprosio-dot/Multiplayer</url>
   <modVersion></modVersion> <!-- filled out by workshop_bundler.sh -->
-  <description>&lt;b&gt;Important: This mod should be placed right below Core and expansions in the mod list to work properly!
+  <description>&lt;b&gt;Unofficial fork&lt;/b&gt; of the RimWorld Multiplayer mod focused on multifaction play: quests and choices routed to the right player, custom and fluid ideoligions at faction creation, faction retirement, and several desync and save-corruption fixes.\n
+&lt;b&gt;Replaces the official Multiplayer mod - do not enable both. Host and all clients must run this exact same build.&lt;/b&gt;\n
+&lt;b&gt;Important: place right below Core and expansions in the mod list!
 Requires RimWorld >= 1.6.4491&lt;/b&gt;\n
-Multiplayer mod for RimWorld.
-    
-FAQ - https://hackmd.io/@rimworldmultiplayer/docs/
+Based on rwmt/Multiplayer (MIT) by the RimWorld Multiplayer Team, on top of PR #961 by CormacOConnor72. Developed in pair-programming with AI (Claude); every fix is documented and play-tested.\n
+Fork &amp; changelog - https://github.com/Disprosio-dot/Multiplayer
+Upstream FAQ - https://hackmd.io/@rimworldmultiplayer/docs/
 Discord - https://discord.gg/S4bxXpv
   </description>
   <modDependencies>

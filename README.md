@@ -1,3 +1,23 @@
+> # ⚠️ Unofficial Multifaction Fork
+>
+> This is a working fork of [rwmt/Multiplayer](https://github.com/rwmt/Multiplayer) by **Gesprosio**, built on top of the `dev` branch plus [PR #961](https://github.com/rwmt/Multiplayer/pull/961) by CormacOConnor72. It focuses on making **multifaction** games feel like everyone is playing their own singleplayer story on a shared planet.
+>
+> **What it adds/fixes** (full changelog in the commit history):
+> - Quest ownership: quests, dialog choices, letters and epic quest chains (relic hunts!) belong to the right player's faction; parallel relic quests, one per ideoligion
+> - **Custom and fluid ideoligions at faction creation** for joining players — full in-game editor, no more singleplayer detour
+> - Per-faction scenarios, deterministic map generation, identical techprint crates
+> - **Faction retirement**: remove a lost player faction cleanly (settlements, caravans, pawns), players return to spectator
+> - Save corruption fix: saving while a gravship is in transit is blocked (the file came out unloadable)
+> - Naming prompts for faction/colony re-enabled, caravan events pause the game, pod targeter soft-lock fixed, several real desyncs diagnosed and killed
+>
+> **Install**: replaces the official Multiplayer mod — do not enable both. Host and all clients must run this **exact same build**. Download from [Releases](https://github.com/Disprosio-dot/Multiplayer/releases), drop the folder into `RimWorld/Mods/`, place right below Core and expansions. Requires [Prepatcher](https://steamcommunity.com/sharedfiles/filedetails/?id=2934420800).
+>
+> **Transparency**: developed in pair-programming with AI (Claude by Anthropic), with every change reviewed, documented and play-tested in real multiplayer games. License stays MIT. Credits: Zetrith and the RimWorld Multiplayer Team, CormacOConnor72 (base PR), cmlee119 and TMaGoYT (approaches referenced from issue threads).
+>
+> Fixes that make sense upstream will be offered as targeted PRs to rwmt/Multiplayer.
+
+---
+
 ![banner](https://user-images.githubusercontent.com/49448379/134965756-2a30ffd9-2f6c-43d6-a2a4-584252fc2e4b.png)
 
 
