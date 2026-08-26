@@ -31,7 +31,14 @@ public class Page_ChooseIdeo_Multifaction : Page
 
         pageChooseIdeo.DrawStructureAndStyleSelection(inRect);
 
-        var loadRect = new Rect(inRect.xMax - 260f, inRect.y, 250f, 32f);
+        var createRect = new Rect(inRect.xMax - 260f, inRect.y, 250f, 32f);
+        var createLabel = customIdeo == null
+            ? "Create custom ideoligion..."
+            : $"Edit custom: {customIdeo.name}";
+        if (Widgets.ButtonText(createRect, createLabel))
+            Find.WindowStack.Add(new Page_CreateIdeo_Multifaction(customIdeo, edited => customIdeo = edited));
+
+        var loadRect = new Rect(inRect.xMax - 260f, inRect.y + 36f, 250f, 32f);
         var loadLabel = customIdeo == null
             ? "Load custom ideoligion..."
             : $"Custom: {customIdeo.name} (click to change)";
@@ -68,7 +75,7 @@ public class Page_ChooseIdeo_Multifaction : Page
         if (files.Length == 0)
         {
             Messages.Message(
-                "No saved ideoligions found. Create one in singleplayer's ideoligion editor and save it, then load it here.",
+                "No saved ideoligions found. Use 'Create custom ideoligion...' to make one here, or save one from the ideoligion editor.",
                 MessageTypeDefOf.RejectInput, historical: false);
             return;
         }
