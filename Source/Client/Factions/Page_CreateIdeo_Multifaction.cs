@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
 using UnityEngine;
@@ -52,17 +53,82 @@ public class Page_CreateIdeo_Multifaction : Page
     public override void DoWindowContents(Rect rect)
     {
         DrawPageTitle(rect);
+        DoFluidCheckbox(new Rect(rect.xMax - 320f, rect.y + 4f, 310f, 24f));
         IdeoUIUtility.DoIdeoDetails(GetMainRect(rect), ideo, ref scrollPosition, ref viewHeight,
             editMode: true,
             ideoLoadedFromFile: loaded => ideo = loaded);
         DoBottomButtons(rect, "DoneButton".Translate(), "RandomizeAll".Translate(), Randomize);
     }
 
+    // Dialog_ChooseMemes reads ideo.Fluid and self-enforces the initial-fluid
+    // rules (one meme, impact <= 2) on every later picker opened from the
+    // detail pane, so the flag only has to be right when it's toggled here
+    private void DoFluidCheckbox(Rect rect)
+    {
+        if (ideo == null)
+            return;
+
+        bool fluid = ideo.Fluid;
+        Widgets.CheckboxLabeled(rect, "Fluid ideoligion (develops over time)", ref fluid);
+        if (Mouse.IsOver(rect))
+            TooltipHandler.TipRegion(rect, "FluidIdeoTip".Translate());
+
+        if (fluid == ideo.Fluid)
+            return;
+
+        if (!fluid)
+        {
+            // development is null for non-fluid ideos everywhere else in the
+            // pipe (ReconstructCustomIdeo, FixIdeoAfterCopy) - keep it that way
+            ideo.Fluid = false;
+            ideo.development = null;
+            return;
+        }
+
+        if (!TryFindIncompatibleMemes(ideo, out var incompatible))
+        {
+            ideo.Fluid = true;
+            return;
+        }
+
+        // Same flow as Page_ConfigureFluidIdeo.loadFluidOrNpcIdeo: confirm,
+        // then re-pick the single starting meme; cancel leaves the ideo fixed
+        TaggedString text = "ConfirmChangeMemesForFluidIdeo".Translate();
+        if (!incompatible.NullOrEmpty())
+            text += " " + "ConfirmIncompatibleMemes".Translate() + ":\n\n" +
+                    incompatible.Select(m => m.LabelCap.Resolve()).ToLineList("- ");
+        text += "\n\n" + "ConfirmChangeMemesForFluidIdeoContinue".Translate();
+        Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(text, delegate
+        {
+            ideo.Fluid = true;
+            ideo.memes.RemoveAll(m => m.category == MemeCategory.Normal);
+            ideo.ClearPrecepts();
+            Find.WindowStack.Add(new Dialog_ChooseMemes(ideo, MemeCategory.Normal, initialSelection: true));
+        }));
+    }
+
+    // Vanilla Page_ConfigureFluidIdeo.TryFindIncompatibleMemes
+    private static bool TryFindIncompatibleMemes(Ideo ideo, out List<MemeDef> memes)
+    {
+        memes = null;
+        if (ideo.memes.Count(m => m.category == MemeCategory.Normal) > IdeoFoundation.MemeCountRangeFluidAbsolute.max)
+            return true;
+
+        foreach (var meme in ideo.memes)
+            if (!IdeoUtility.IsMemeAllowedForInitialFluidIdeo(meme))
+                (memes ??= new List<MemeDef>()).Add(meme);
+
+        return memes != null && memes.Count > 0;
+    }
+
     private void Randomize()
     {
         if (ideo != null && TutorSystem.AllowAction("ConfiguringIdeo"))
         {
-            ideo.foundation.Init(new IdeoGenerationParms(IdeoUIUtility.FactionForRandomization(ideo)));
+            // Vanilla Page_ConfigureIdeo.Randomize passes ideo.Fluid so a
+            // fluid scratch ideo re-rolls within the initial-fluid meme rules
+            ideo.foundation.Init(new IdeoGenerationParms(IdeoUIUtility.FactionForRandomization(ideo),
+                forceNoExpansionIdeo: false, null, null, null, classicExtra: false, forceNoWeaponPreference: false, ideo.Fluid));
             SoundDefOf.Tick_High.PlayOneShotOnCamera();
         }
     }
@@ -100,6 +166,15 @@ public class Page_CreateIdeo_Multifaction : Page
         {
             Messages.Message("MessageRitualMissingTarget".Translate(ritualMissingTarget.Item1.LabelCap.Named("PRECEPT"))
                     + ": " + ritualMissingTarget.Item2.ToCommaList().CapitalizeFirst() + ".",
+                MessageTypeDefOf.RejectInput, historical: false);
+            return false;
+        }
+
+        // Belt and suspenders: Dialog_ChooseMemes already enforces this while
+        // the fluid flag is set, but the flag can be toggled after picking
+        if (ideo.Fluid && TryFindIncompatibleMemes(ideo, out _))
+        {
+            Messages.Message("A new fluid ideoligion may only start with one low-impact meme.",
                 MessageTypeDefOf.RejectInput, historical: false);
             return false;
         }
