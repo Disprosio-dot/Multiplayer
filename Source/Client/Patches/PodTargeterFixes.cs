@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using HarmonyLib;
 using RimWorld;
@@ -49,7 +50,10 @@ static class PodTargeterUtil
     }
 }
 
-[HarmonyPatch(typeof(CompLaunchable), nameof(CompLaunchable.ChoseWorldTarget))]
+// The instance overload (the world targeter's confirm callback); ChoseWorldTarget
+// also has a static overload, so the argument types disambiguate
+[HarmonyPatch(typeof(CompLaunchable), nameof(CompLaunchable.ChoseWorldTarget),
+    typeof(GlobalTargetInfo), typeof(Action<PlanetTile, TransportersArrivalAction>), typeof(float?))]
 static class StaleLaunchConfirmGuard
 {
     static bool Prefix(CompLaunchable __instance, ref bool __result)

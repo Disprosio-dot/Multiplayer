@@ -532,11 +532,6 @@ namespace Multiplayer.Client
                     crate.GetMultiSelectFloatMenuOptions(SyncUtil.prevSelected.OfType<Pawn>()).ExecuteEnumerable();
                 });
 
-            // Faction/colony naming dialogs (opened from the multifaction sidebar);
-            // Named targets Faction.OfPlayer = the issuing player's faction in command context
-            SyncMethod.Register(typeof(NamePlayerFactionDialogUtility), nameof(NamePlayerFactionDialogUtility.Named));
-            SyncMethod.Register(typeof(NamePlayerSettlementDialogUtility), nameof(NamePlayerSettlementDialogUtility.Named));
-
             // Double ExecuteWhenFinished ensures it'll load after MP Compat late patches,
             // so it will have registered all its sync workers already.
             LongEventHandler.ExecuteWhenFinished(() => LongEventHandler.ExecuteWhenFinished(() =>
