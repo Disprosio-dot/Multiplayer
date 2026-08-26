@@ -17,6 +17,10 @@ public class Page_ChooseIdeo_Multifaction : Page
     // (TryLoadIdeo registers nothing) and serialized into the creation command
     private Ideo customIdeo;
 
+    // Detects preset clicks made inside DrawCategory, to keep preset and
+    // custom selections mutually exclusive
+    private IdeoPresetDef lastSelectedPreset;
+
     public override void DoWindowContents(Rect inRect)
     {
         DrawPageTitle(inRect);
@@ -31,40 +35,90 @@ public class Page_ChooseIdeo_Multifaction : Page
 
         pageChooseIdeo.DrawStructureAndStyleSelection(inRect);
 
-        var createRect = new Rect(inRect.xMax - 260f, inRect.y, 250f, 32f);
-        var createLabel = customIdeo == null
-            ? "Create custom ideoligion..."
-            : $"Edit custom: {customIdeo.name}";
-        if (Widgets.ButtonText(createRect, createLabel))
-            Find.WindowStack.Add(new Page_CreateIdeo_Multifaction(customIdeo, edited => customIdeo = edited));
-
-        var loadRect = new Rect(inRect.xMax - 260f, inRect.y + 36f, 250f, 32f);
-        var loadLabel = customIdeo == null
-            ? "Load custom ideoligion..."
-            : $"Custom: {customIdeo.name} (click to change)";
-        if (Widgets.ButtonText(loadRect, loadLabel))
-            OpenCustomIdeoMenu();
+        // A preset picked after a custom ideo replaces it (and Done in the
+        // editor clears the preset): only one source feeds GetIdeologyData
+        if (pageChooseIdeo.selectedIdeo != null && pageChooseIdeo.selectedIdeo != lastSelectedPreset)
+            customIdeo = null;
+        lastSelectedPreset = pageChooseIdeo.selectedIdeo;
 
         Rect outRect = mainRect;
         outRect.width = 954f;
         outRect.yMin += totalHeight;
         float num3 = (InitialSize.x - 937f) / 2f;
+        float buttonX = (inRect.width - Page_ChooseIdeoPreset.ButtonSize.x - 10f - 500f - 16f) / 2f - num3;
 
         Widgets.BeginScrollView(
             viewRect: new Rect(0f - num3, 0f, 921f, pageChooseIdeo.totalCategoryListHeight + 100f),
             outRect: outRect,
             scrollPosition: ref pageChooseIdeo.leftScrollPosition);
 
-        totalHeight = 0f;
+        float curY = 0f;
         pageChooseIdeo.lastCategoryGroupLabel = "";
+
+        // "Custom ideoligions" section, vanilla Page_ChooseIdeoPreset layout
+        // minus the Classic row (classic mode is game-wide, not per faction)
+        Widgets.Label(new Rect(0f, curY, 300f, Text.LineHeight), "CustomIdeoligions".Translate());
+        GUI.color = new Color(1f, 1f, 1f, 0.5f);
+        Widgets.DrawLineHorizontal(0f, curY + Text.LineHeight + 2f, 901f);
+        GUI.color = Color.white;
+        curY += 12f;
+
+        var fluidRect = new Rect(buttonX, curY + Text.LineHeight,
+            Page_ChooseIdeoPreset.ButtonSize.x, Page_ChooseIdeoPreset.ButtonSize.y);
+        DrawCategoryDescription(IdeoPresetCategoryDefOf.Fluid, fluidRect);
+        pageChooseIdeo.DrawSelectable(fluidRect, "CreateCustomFluid".Translate(), null, TextAnchor.MiddleCenter,
+            customIdeo is { Fluid: true }, true, null, () => OpenEditor(startFluid: true));
+        curY = fluidRect.yMax + 10f;
+
+        var fixedRect = new Rect(buttonX, curY + Text.LineHeight,
+            Page_ChooseIdeoPreset.ButtonSize.x, Page_ChooseIdeoPreset.ButtonSize.y);
+        DrawCategoryDescription(IdeoPresetCategoryDefOf.Custom, fixedRect);
+        pageChooseIdeo.DrawSelectable(fixedRect, "CreateCustomFixed".Translate(), null, TextAnchor.MiddleCenter,
+            customIdeo is { Fluid: false }, true, null, () => OpenEditor(startFluid: false));
+
+        var loadRect = new Rect(fixedRect.xMax - Page_ChooseIdeoPreset.ButtonSizeSmall.x, fixedRect.yMax + 10f,
+            Page_ChooseIdeoPreset.ButtonSizeSmall.x, Page_ChooseIdeoPreset.ButtonSizeSmall.y);
+        pageChooseIdeo.DrawSelectable(loadRect, "LoadSaved".Translate() + "...", null, TextAnchor.MiddleCenter,
+            false, true, null, OpenCustomIdeoMenu);
+
+        if (customIdeo != null)
+        {
+            Text.Anchor = TextAnchor.MiddleLeft;
+            Widgets.Label(new Rect(loadRect.xMax + 10f, loadRect.y, 500f, loadRect.height),
+                $"{customIdeo.name} ({(customIdeo.Fluid ? "fluid" : "fixed")})");
+            Text.Anchor = TextAnchor.UpperLeft;
+        }
+
+        curY = loadRect.yMax + 10f;
+
         foreach (IdeoPresetCategoryDef item in DefDatabase<IdeoPresetCategoryDef>.AllDefsListForReading.Where(c => c != IdeoPresetCategoryDefOf.Classic && c != IdeoPresetCategoryDefOf.Custom && c != IdeoPresetCategoryDefOf.Fluid))
         {
-            pageChooseIdeo.DrawCategory(item, ref totalHeight);
+            pageChooseIdeo.DrawCategory(item, ref curY);
         }
-        pageChooseIdeo.totalCategoryListHeight = totalHeight;
+        pageChooseIdeo.totalCategoryListHeight = curY;
         Widgets.EndScrollView();
 
         DoBottomButtons(inRect);
+    }
+
+    private static void DrawCategoryDescription(IdeoPresetCategoryDef cat, Rect buttonRect)
+    {
+        var descRect = new Rect(buttonRect.xMax + 10f, buttonRect.y, 500f, buttonRect.height);
+        Text.Anchor = TextAnchor.MiddleLeft;
+        Widgets.Label(descRect, cat.description);
+        Text.Anchor = TextAnchor.UpperLeft;
+    }
+
+    // Clicking the matching kind re-edits the current custom ideo; the other
+    // kind starts fresh (the editor's Done replaces the custom on delivery)
+    private void OpenEditor(bool startFluid)
+    {
+        var existing = customIdeo != null && customIdeo.Fluid == startFluid ? customIdeo : null;
+        Find.WindowStack.Add(new Page_CreateIdeo_Multifaction(existing, edited =>
+        {
+            customIdeo = edited;
+            pageChooseIdeo.selectedIdeo = null;
+        }, startFluid));
     }
 
     private void OpenCustomIdeoMenu()

@@ -24,16 +24,18 @@ public class Page_CreateIdeo_Multifaction : Page
 
     private Ideo ideo;
     private readonly Action<Ideo> done;
+    private readonly bool startFluid;
 
     private Vector2 scrollPosition;
     private float viewHeight;
 
     // Edits run on a clone so Back discards them and the chooser's current
     // custom ideo stays intact until Next delivers the replacement
-    public Page_CreateIdeo_Multifaction(Ideo existing, Action<Ideo> done)
+    public Page_CreateIdeo_Multifaction(Ideo existing, Action<Ideo> done, bool startFluid = false)
     {
         ideo = existing != null ? CloneDetached(existing) : null;
         this.done = done;
+        this.startFluid = startFluid;
         grayOutIfOtherDialogOpen = true;
     }
 
@@ -43,6 +45,9 @@ public class Page_CreateIdeo_Multifaction : Page
         if (ideo == null)
         {
             ideo = IdeoUtility.MakeEmptyIdeo();
+            // Set before any picker opens so Dialog_ChooseMemes enforces the
+            // initial-fluid rules (one normal meme, impact <= 2) from the start
+            ideo.Fluid = startFluid;
             // Uncancelable while the ideo has no memes, and chains into the
             // meme picker: guarantees a named, populated ideo before the
             // player gets back to this page
