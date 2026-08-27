@@ -21,6 +21,8 @@ Based on the upstream `dev` branch plus [PR #961](https://github.com/rwmt/Multip
 - Other players see a "«faction»'s quest" entry in the quest log instead of the full details
 - Choice letters wait longer before force-picking a default (+1 day, up to twice, with a warning before they expire)
 - Epic quest chains run in parallel: each ideoligion gets its own relic hunt, so one player's quest no longer blocks everyone else's
+- Quest timers run on the right map's clock (detected via reflection, so DLC and modded quests are covered too)
+- With multiple ideoligions in the colony, grouped ritual gizmos open the right ideoligion's dialog instead of refusing with "another ritual session is already in progress"
 
 **You can create your own ideoligion in game**
 
@@ -38,7 +40,7 @@ Based on the upstream `dev` branch plus [PR #961](https://github.com/rwmt/Multip
 **Stability**
 
 - Saves can no longer be corrupted by gravships: saving mid-transit produced a broken file (ship and crew just missing), now all save paths wait until you've landed — saving in orbit is fine, same as vanilla
-- Three real desyncs diagnosed from actual desync reports and fixed at the root
+- Four real desyncs diagnosed from actual desync reports and fixed at the root
 - A vanilla bug in "Usually..." precepts made the RNG stream unstable in multiplayer — neutralized
 - Map generation for quest sites is deterministic now, so all clients get identical loot and techprint crates
 
