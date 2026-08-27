@@ -3,6 +3,7 @@ using RimWorld;
 using RimWorld.Planet;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Verse;
 
 namespace Multiplayer.Client.Factions;
@@ -42,7 +43,13 @@ static class MapGenFactionPatch
         if (mapParent != null && mapParent.Faction is { IsPlayer: true })
             return mapParent.Faction;
 
-        var caravan = worldObjectsHolder.PlayerControlledCaravanAt(tile);
+        // Desync-106: PlayerControlledCaravanAt is viewer-relative
+        // (IsPlayerControlled compares against ambient Faction.OfPlayer), so
+        // only the arriving caravan's own client resolved it here - everyone
+        // else fell through to a null context and generated the quest-site map
+        // under their own ambient faction. Look it up by actual faction, like
+        // the transporter and gravship checks below already do.
+        var caravan = worldObjectsHolder.Caravans.Find(c => c.Tile == tile && c.Faction is { IsPlayer: true });
         if (caravan != null)
             return caravan.Faction;
 
@@ -54,7 +61,23 @@ static class MapGenFactionPatch
         if (gravship != null)
             return gravship.Faction;
 
-        return TileFactionContext.GetFactionForTile(tile);
+        var stored = TileFactionContext.GetFactionForTile(tile);
+        if (stored != null)
+            return stored;
+
+        // Deterministic last resort, mirroring MapSetup.DeterministicInitFaction:
+        // generation must never run under the ambient faction - that's the
+        // viewer, different on every client
+        if (Multiplayer.Client != null)
+        {
+            var spectator = Multiplayer.WorldComp?.spectatorFaction;
+            return Find.FactionManager.AllFactionsListForReading
+                .Where(f => f.IsPlayer && f != spectator)
+                .OrderBy(f => f.loadID)
+                .FirstOrDefault();
+        }
+
+        return null;
     }
 
     static void Finalizer()
