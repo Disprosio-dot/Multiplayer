@@ -57,6 +57,16 @@ The big things (parallel relic hunts, faction retirement, the ideoligion editor,
 
 Things I'd like to do next: per-faction Anomaly monolith, multiple gravships, the Archonexus ending in multifaction.
 
+## What about other mods?
+
+Mod compatibility is the same as upstream — the sync API is untouched, so a mod that desyncs on the official Multiplayer will desync here too. This fork doesn't fix other mods.
+
+That said, a few things might turn out better in practice (no promises, we play mostly vanilla):
+
+- Modded and DLC quests get their timers put on the right map clock — the base had a hardcoded list of vanilla quest types, this fork detects them via reflection
+- Map generation for quest sites is deterministic now, which should help any modded content that spawns there
+- With four vanilla desyncs out of the way, when something does desync in a modded game it's easier to tell the mod is the culprit
+
 Fixes that make sense for everyone will be offered upstream as proper pull requests.
 
 ## Credits and license
